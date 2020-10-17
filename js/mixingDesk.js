@@ -34,19 +34,34 @@ function drawChannel(channel){
 	channelDiv.appendChild(channelName);
 	
 	//create slider for volume
-	var channelSlider = document.createElement('input');
-	channelSlider.type = "range";
-	channelSlider.min = 0;
-	channelSlider.max = 100;
-	channelSlider.value = channel.volume;	
-	channelSlider.id = channel.name;
-	channelDiv.appendChild(channelSlider);
+	var volumeSlider = document.createElement('input');
+	volumeSlider.type = "range";
+	volumeSlider.min = 0;
+	volumeSlider.max = 100;
+	volumeSlider.value = channel.volume;	
+	volumeSlider.id = channel.name + "Vol";
+	channelDiv.appendChild(volumeSlider);
 	
 	//<p> that shows current volume for slider
 	var channelVolume = document.createElement('p');
-	channelVolume.id = channel.name + "Vol";
+	channelVolume.id = channel.name + "VolDisplay";
 	channelVolume.innerHTML = channel.volume;
 	channelDiv.appendChild(channelVolume);
+	
+	//create slider for pan min = -50 max = +50 default  = 0
+	var panSlider = document.createElement('input');
+	panSlider.type = "range";
+	panSlider.min = -50;
+	panSlider.max = 50;
+	panSlider.value = channel.pan;
+	panSlider.id = channel.name + "Pan";
+	channelDiv.appendChild(panSlider);
+	
+	//create <p> that updates for pan slider value
+	var channelPan = document.createElement('p');
+	channelPan.id = channel.name + "PanDisplay";
+	channelPan.innerHTML = channel.pan;
+	channelDiv.appendChild(channelPan);
 	
 	//create mute button
 	var btnMute = document.createElement('input');
@@ -54,9 +69,10 @@ function drawChannel(channel){
 	btnMute.id = channel.name + "Mute";
 	btnMute.value = "Mute";
 	btnMute.classList.add("button");
-	channelDiv.appendChild(btnMute);		
-	channelDiv.appendChild(document.createElement('br'));
+	channelDiv.appendChild(btnMute);	
+	
 	//inputs like being together so add break (might be able to do this in css but i cant be arsed)
+	channelDiv.appendChild(document.createElement('br'));
 	
 	//create remove button
 	var btnRemove = document.createElement('input');
@@ -78,20 +94,20 @@ function channelObj(chName, chVolume, chPan, chIndex, chSource){
 	var channel = this;
 	
 	
-	this.volListener = function(){
-		let slider = document.getElementById(channel.name);
+	this.sliderVolume_EventHandler = function(){
+		let slider = document.getElementById(channel.name + "Vol");
 		slider.addEventListener("input", function(){	
 			channel.volume = slider.value;
 			
 			if(channel.muted == false){
-				let volumeDisplay = document.getElementById(channel.name + "Vol");
+				let volumeDisplay = document.getElementById(channel.name + "VolDisplay");
 				volumeDisplay.innerHTML = channel.volume;
 				//source.volume = channel.volume
 			}			
 		});
 	}
 	
-	this.removeListener = function(){ //IF NAME EXISTS WHEN ADD CHANNEL IS CLICKED IT NEEDS TO CHANGE ITS NAME TO "ch x(x)" do this in addChannel()
+	this.btnRemove_EventHandler = function(){ //IF NAME EXISTS WHEN ADD CHANNEL IS CLICKED IT NEEDS TO CHANGE ITS NAME TO "ch x(x)" do this in addChannel()
 	
 		let btnRemove = document.getElementById(channel.name + "Remove");
 		btnRemove.addEventListener("click", function(){
@@ -117,11 +133,11 @@ function channelObj(chName, chVolume, chPan, chIndex, chSource){
 		});
 	}
 	
-	this.muteListener = function(){
+	this.btnMute_EventHandler = function(){
 		let btnMute = document.getElementById(channel.name + "Mute");
 		btnMute.addEventListener("click", function(){
 			
-			let volumeDisplay = document.getElementById(channel.name + "Vol");
+			let volumeDisplay = document.getElementById(channel.name + "VolDisplay");
 			
 			//have bool for mute or not (not mute by default) if(bool) then either muted or un mute have vol still be original vol but make channel mute
 			if(channel.muted == false){
@@ -140,12 +156,14 @@ function channelObj(chName, chVolume, chPan, chIndex, chSource){
 	}
 	
 	//pan slider needs adding in on the draw but function is complete
-	this.panListener = function(){
+	this.sliderPan_EventHandler = function(){
 		let panSlider = document.getElementById(channel.name + "Pan");
 		panSlider.addEventListener("input", function(){
-			channel.pan = panSlider.value;
+			let pan = panSlider.value;
+			channel.pan = pan;
 			
-			console.log(channel.name + " " + channel.pan)
+			let panDisplay = document.getElementById(channel.name + "PanDisplay");
+			panDisplay.innerHTML = pan;
 		});
 	}
 	
@@ -172,9 +190,10 @@ function addChannel(){
 	mixingDeskArray.push(newChannel);
 	drawChannel(newChannel);
 
-	newChannel.volListener();
-	newChannel.removeListener();
-	newChannel.muteListener();
+	newChannel.sliderVolume_EventHandler();
+	newChannel.btnRemove_EventHandler();
+	newChannel.btnMute_EventHandler();
+	newChannel.sliderPan_EventHandler();
 	
 }
 
