@@ -21,7 +21,7 @@ function drawChannel(channel){
 	//desk div in body
 	var desk = document.getElementById('desk'); 
 
-	//create div for channel	
+	//create div for channel
 	var channelDiv = document.createElement('div');
 	channelDiv.classList.add("col");
 	channelDiv.id = channel.index;
@@ -31,6 +31,7 @@ function drawChannel(channel){
 	//create <p> containing channel name
 	var channelName = document.createElement('p');
 	channelName.innerHTML = channel.name;
+	channelName.id = channel.index + "Name";
 	channelDiv.appendChild(channelName);
 	
 	//create slider for volume
@@ -39,12 +40,12 @@ function drawChannel(channel){
 	volumeSlider.min = 0;
 	volumeSlider.max = 100;
 	volumeSlider.value = channel.volume;	
-	volumeSlider.id = channel.name + "Vol";
+	volumeSlider.id = channel.index + "Vol";
 	channelDiv.appendChild(volumeSlider);
 	
 	//<p> that shows current volume for slider
 	var channelVolume = document.createElement('p');
-	channelVolume.id = channel.name + "VolDisplay";
+	channelVolume.id = channel.index + "VolDisplay";
 	channelVolume.innerHTML = channel.volume;
 	channelDiv.appendChild(channelVolume);
 	
@@ -54,19 +55,19 @@ function drawChannel(channel){
 	panSlider.min = -50;
 	panSlider.max = 50;
 	panSlider.value = channel.pan;
-	panSlider.id = channel.name + "Pan";
+	panSlider.id = channel.index + "Pan";
 	channelDiv.appendChild(panSlider);
 	
 	//create <p> that updates for pan slider value
 	var channelPan = document.createElement('p');
-	channelPan.id = channel.name + "PanDisplay";
+	channelPan.id = channel.index + "PanDisplay";
 	channelPan.innerHTML = channel.pan;
 	channelDiv.appendChild(channelPan);
 	
 	//create mute button
 	var btnMute = document.createElement('input');
 	btnMute.type = "button";
-	btnMute.id = channel.name + "Mute";
+	btnMute.id = channel.index + "Mute";
 	btnMute.value = "Mute";
 	btnMute.classList.add("button");
 	channelDiv.appendChild(btnMute);	
@@ -77,7 +78,7 @@ function drawChannel(channel){
 	//create remove button
 	var btnRemove = document.createElement('input');
 	btnRemove.type = "button";
-	btnRemove.id = channel.name + "Remove";
+	btnRemove.id = channel.index + "Remove";
 	btnRemove.value = "Close";
 	btnRemove.classList.add("button");
 	channelDiv.appendChild(btnRemove);
@@ -95,12 +96,12 @@ function channelObj(chName, chVolume, chPan, chIndex, chSource){
 	
 	
 	this.sliderVolume_EventHandler = function(){
-		let slider = document.getElementById(channel.name + "Vol");
+		let slider = document.getElementById(channel.index + "Vol");
 		slider.addEventListener("input", function(){	
 			channel.volume = slider.value;
 			
 			if(channel.muted == false){
-				let volumeDisplay = document.getElementById(channel.name + "VolDisplay");
+				let volumeDisplay = document.getElementById(channel.index + "VolDisplay");
 				volumeDisplay.innerHTML = channel.volume;
 				//source.volume = channel.volume
 			}			
@@ -109,7 +110,7 @@ function channelObj(chName, chVolume, chPan, chIndex, chSource){
 	
 	this.btnRemove_EventHandler = function(){ //IF NAME EXISTS WHEN ADD CHANNEL IS CLICKED IT NEEDS TO CHANGE ITS NAME TO "ch x(x)" do this in addChannel()
 	
-		let btnRemove = document.getElementById(channel.name + "Remove");
+		let btnRemove = document.getElementById(channel.index + "Remove");
 		btnRemove.addEventListener("click", function(){
 			
 			//delete channels div
@@ -123,21 +124,29 @@ function channelObj(chName, chVolume, chPan, chIndex, chSource){
 			for(i = channel.index; i < mixingDeskArray.length; i++){
 				// "_" prefix is shifted channels
 				let _channel = mixingDeskArray[i];
-				//use old index for div to get
-				let _channelDiv = document.getElementById(_channel.index);
-				//set div-id and index to new place
-				_channelDiv.id = i;
+				//use old index to get then set new ids
+				document.getElementById(_channel.index).id = i;
+				document.getElementById(_channel.index + "Name").id = i + "Name";
+				document.getElementById(_channel.index + "Vol").id = i + "Vol";
+				document.getElementById(_channel.index + "VolDisplay").id = i + "VolDisplay";
+				document.getElementById(_channel.index + "Pan").id = i + "Pan";
+				document.getElementById(_channel.index + "PanDisplay").id = i + "PanDisplay";
+				document.getElementById(_channel.index + "Mute").id = i + "Mute";
+				document.getElementById(_channel.index + "Remove").id = i + "Remove";
+				
+				//set index to new place
 				_channel.index = i;
+				
 			}
 						
 		});
 	}
 	
 	this.btnMute_EventHandler = function(){
-		let btnMute = document.getElementById(channel.name + "Mute");
+		let btnMute = document.getElementById(channel.index + "Mute");
 		btnMute.addEventListener("click", function(){
 			
-			let volumeDisplay = document.getElementById(channel.name + "VolDisplay");
+			let volumeDisplay = document.getElementById(channel.index + "VolDisplay");
 			
 			//have bool for mute or not (not mute by default) if(bool) then either muted or un mute have vol still be original vol but make channel mute
 			if(channel.muted == false){
@@ -157,13 +166,24 @@ function channelObj(chName, chVolume, chPan, chIndex, chSource){
 	
 	//pan slider needs adding in on the draw but function is complete
 	this.sliderPan_EventHandler = function(){
-		let panSlider = document.getElementById(channel.name + "Pan");
+		let panSlider = document.getElementById(channel.index + "Pan");
 		panSlider.addEventListener("input", function(){
 			let pan = panSlider.value;
 			channel.pan = pan;
 			
-			let panDisplay = document.getElementById(channel.name + "PanDisplay");
+			let panDisplay = document.getElementById(channel.index + "PanDisplay");
 			panDisplay.innerHTML = pan;
+		});
+	}
+	
+	//event listner for name change
+	this.nameChange_EventHandler = function(){
+		let nameTag = document.getElementById(channel.index + "Name");
+		nameTag.addEventListener("dblclick", function(){
+			var newName = prompt("Enter channel name:");
+			nameTag.innerHTML = newName;			
+			channel.name = newName;
+			
 		});
 	}
 	
@@ -194,7 +214,7 @@ function addChannel(){
 	newChannel.btnRemove_EventHandler();
 	newChannel.btnMute_EventHandler();
 	newChannel.sliderPan_EventHandler();
-	
+	newChannel.nameChange_EventHandler();
 }
 
 function play(){
