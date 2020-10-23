@@ -1,10 +1,9 @@
 /* The navigation bar */
 .navbar{
-overflow: hidden;
-background-color: #89cff0;
-position: fixed; /* Set the navbar to fixed position */
-  top: 0; /* Position the navbar at the top of the page */
-  width: 100%; /*Full width */
+	overflow: hidden;
+	background-color: #89cff0;
+   top: 0; /* Position the navbar at the top of the page */
+   width: 100%; /*Full width */
 }
 
 /* Links inside the navbar */
@@ -23,3 +22,6 @@ position: fixed; /* Set the navbar to fixed position */
 	color: inherit;
 }
 
+.sequencerRoll{
+	margin-left: 20px;
+}

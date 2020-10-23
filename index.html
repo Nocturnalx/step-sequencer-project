@@ -20,43 +20,37 @@ if (/MSIE (\d+\.\d+);/.test(navigator.userAgent) || navigator.userAgent.indexOf(
 }
 </script>
 
-
 <!--navbar-->
-<div id="navbar" class="navbar text">
+<div id="navbar" class="navbar">
 	<a href="index.html">Home</a>
 	<a href="guide.html">Guide</a>
 	<a href="https://courses.hud.ac.uk/full-time/undergraduate/music-technology-and-audio-systems-bsc-hons#_ga=2.30194301.333508218.1601651783-2069655854.1598464954" target="_blank">Huddersfield University Music Technology</a>
 	<a href="contact.html">Contact info</a>
 </div>
 
-<!--headers-->
-<div id="header" class="center">
-	<h1>Web Audio Preview</h1>
-	<h3>Joe Davison</h3>
-	<h6 id="dateTime"></h6>
-	<script src="js\script.js"></script>
-</div>
+<div class="navbar" style="background-color: transparent;">
+	<!--play pause button-->
+	<div class="playPauseButton">
+		<input class="button" value="Play" type="button" id="btnPlay">
+		<input class="button" value="Pause" type="button" id="btnPause">
+	</div>
 
-<!--Mixing desk-->
-<div class="center">
-	<div class="row" id="desk"></div>
-</div>
-
-<!--play pause button-->
-<div class="center">
-	<input class="button" value="Play" type="button" id="btnPlay">
-	<input class="button" value="Pause" type="button" id="btnPause">
-</div>
-
-<!--Add new channel button-->
-<div class="center">
-	<div id="divAddChannel">
+	<!--Add new channel button-->
+	<div id="divAddChannel" class="addChannelButton">
 		<label>Channel name: <input id="newChannelName" type="text"></label>
 		<br>
 		<input type="button" id="btnAddChannel" value="Add channel" class="button">
 	</div>
 </div>
 
-<script src="js/mixingDesk.js"></script>
+<!--step sequencer holder-->
+<div id="sequencerRoll" class="sequencerRoll col">
+</div>
+
+<!--Mixing desk-->
+<div id="desk" class="mixingDesk row">
+</div>
+
+<script src="js/main.js"></script>
 </body>
 </html>

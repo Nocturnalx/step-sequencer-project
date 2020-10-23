@@ -1,7 +1,4 @@
 var mixingDeskArray = []; // Set up mixingdesk list
-var channel1;
-var channel2;
-
 
 //listener for add channel button
 let btnAddChannel = document.getElementById('btnAddChannel');
@@ -84,6 +81,22 @@ function drawChannel(channel){
 	channelDiv.appendChild(btnRemove);
 }
 
+function drawSequencer(channel){
+	//declare sequencer roll (parent)
+	var sequencerRoll = document.getElementById('sequencerRoll');
+	
+	var seqDiv = document.createElement('div');
+	seqDiv.classList.add("row");
+	seqDiv.id = channel.index + "Seq";
+	sequencerRoll.appendChild(seqDiv);
+	
+	//create p with channel name
+	var seqNameTag = document.createElement('p');
+	seqNameTag.id = channel.index + "SeqName";
+	seqNameTag.innerHTML = channel.name;
+	seqDiv.appendChild(seqNameTag)
+}
+
 //instantiate new channel object
 function channelObj(chName, chVolume, chPan, chIndex, chSource){
 	this.name = chName;
@@ -116,6 +129,9 @@ function channelObj(chName, chVolume, chPan, chIndex, chSource){
 			//delete channels div
 			var channelDiv = document.getElementById(channel.index);
 			channelDiv.remove();
+			
+			var rollDiv = document.getElementById(channel.index + "Seq");
+			rollDiv.remove();
 				
 			//splice to get rid of item from middle of array
 			mixingDeskArray.splice(channel.index,1);
@@ -133,6 +149,9 @@ function channelObj(chName, chVolume, chPan, chIndex, chSource){
 				document.getElementById(_channel.index + "PanDisplay").id = i + "PanDisplay";
 				document.getElementById(_channel.index + "Mute").id = i + "Mute";
 				document.getElementById(_channel.index + "Remove").id = i + "Remove";
+				
+				document.getElementById(_channel.index + "Seq").id = i + "Seq";
+				document.getElementById(_channel.index + "SeqName").id = i +"SeqName";
 				
 				//set index to new place
 				_channel.index = i;
@@ -178,13 +197,26 @@ function channelObj(chName, chVolume, chPan, chIndex, chSource){
 	
 	//event listner for name change
 	this.nameChange_EventHandler = function(){
-		let nameTag = document.getElementById(channel.index + "Name");
-		nameTag.addEventListener("dblclick", function(){
+	
+		let chNameTag = document.getElementById(channel.index + "Name");
+		let seqNameTag = document.getElementById(channel.index + "SeqName");
+		
+		chNameTag.addEventListener("dblclick", function(){
 			var newName = prompt("Enter channel name:");
-			nameTag.innerHTML = newName;			
-			channel.name = newName;
-			
+			chNameTag.innerHTML = newName;		
+			seqNameTag.innerHTML = newName;
+				
+			channel.name = newName;			
 		});
+		
+		seqNameTag.addEventListener("dblclick", function(){
+			var newName = prompt("Enter channel name:");
+			chNameTag.innerHTML = newName;		
+			seqNameTag.innerHTML = newName;
+				
+			channel.name = newName;				
+		});
+		
 	}
 	
 }
@@ -209,6 +241,7 @@ function addChannel(){
 	let newChannel = new channelObj(newChannelName, 0.0, 0.0, channelIndex, source);
 	mixingDeskArray.push(newChannel);
 	drawChannel(newChannel);
+	drawSequencer(newChannel);
 
 	newChannel.sliderVolume_EventHandler();
 	newChannel.btnRemove_EventHandler();

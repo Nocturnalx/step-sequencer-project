@@ -33,6 +33,23 @@ body a:hover{
 	cursor: pointer;
 }
 
+.mixingDesk{
+	padding-left: 20px;
+	padding-right: 20px;
+	width: 100%;
+	position: fixed;
+	bottom: 0;
+}
+
+.addChannelButton{
+	float: right;
+	padding-right: 20px;
+}
+
+.playPauseButton{
+	float: left;
+	padding-left: 20px;
+}
 
 .link{
 	cursor: pointer;
