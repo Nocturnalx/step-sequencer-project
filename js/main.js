@@ -95,6 +95,23 @@ function drawSequencer(channel){
 	seqNameTag.id = channel.index + "SeqName";
 	seqNameTag.innerHTML = channel.name;
 	seqDiv.appendChild(seqNameTag)
+	
+	for (i = 0; i < 8; i++)
+	{
+		//draw each step for channel
+		var btnStep = document.createElement('img');
+		btnStep.src = "resources/pad.png";
+		btnStep.classList.add("step");		
+		
+		var step = new stepObj(channel, i);	
+		channel.stepArray.push(step);
+				
+		btnStep.id = step.channelIndex + "" + step.index;		
+		seqDiv.appendChild(btnStep);
+		
+		step.click_EventHandler();
+	}
+	
 }
 
 //instantiate new channel object
@@ -107,6 +124,8 @@ function channelObj(chName, chVolume, chPan, chIndex, chSource){
 	this.muted = false;
 	var channel = this;
 	
+	var arr = [];
+	this.stepArray = arr;
 	
 	this.sliderVolume_EventHandler = function(){
 		let slider = document.getElementById(channel.index + "Vol");
@@ -150,11 +169,14 @@ function channelObj(chName, chVolume, chPan, chIndex, chSource){
 				document.getElementById(_channel.index + "Mute").id = i + "Mute";
 				document.getElementById(_channel.index + "Remove").id = i + "Remove";
 				
-				document.getElementById(_channel.index + "Seq").id = i + "Seq";
-				document.getElementById(_channel.index + "SeqName").id = i +"SeqName";
+				//get container for steps delete then call drawSequencer() for given channel to redraw (this works but doesnt save state need to save state then draw with new state)
+				var stepContainer = document.getElementById(_channel.index + "Seq");
+				stepContainer.remove();
 				
 				//set index to new place
 				_channel.index = i;
+				
+				drawSequencer(_channel);
 				
 			}
 						
@@ -217,6 +239,30 @@ function channelObj(chName, chVolume, chPan, chIndex, chSource){
 			channel.name = newName;				
 		});
 		
+	}
+	
+}
+
+function stepObj(channel, stepNo){
+	this.index = stepNo;
+	this.channelIndex = channel.index;
+	this.active = false;
+	var step = this;
+	
+	this.click_EventHandler = function(){
+		var stepButton = document.getElementById(step.channelIndex + "" + step.index);
+		
+		stepButton.addEventListener("click",function(){
+			if (step.active == false){
+				stepButton.src = "resources/padOn.png";
+				step.active = true;
+				//make noise
+			} else {
+				stepButton.src = "resources/pad.png"
+				step.active = false;
+				//dont make noise
+			}			
+		});
 	}
 	
 }
