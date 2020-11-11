@@ -94,6 +94,7 @@ function drawSequencer(channel){
 	var seqNameTag = document.createElement('p');
 	seqNameTag.id = channel.index + "SeqName";
 	seqNameTag.innerHTML = channel.name;
+<<<<<<< Updated upstream
 	seqDiv.appendChild(seqNameTag)
 	
 	for (i = 0; i < 8; i++)
@@ -112,6 +113,9 @@ function drawSequencer(channel){
 		step.click_EventHandler();
 	}
 	
+=======
+	seqDiv.appendChild(seqNameTag);
+>>>>>>> Stashed changes
 }
 
 //instantiate new channel object
