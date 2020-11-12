@@ -20,6 +20,10 @@ body a:hover{
 	color: inherit;
 }
 
+body{
+	background-color: #eaecf0 !important;
+}
+
 /*button style*/
 .button {
 	color: #fff !important;
@@ -33,12 +37,39 @@ body a:hover{
 	cursor: pointer;
 }
 
+.link{
+	cursor: pointer;
+}
+
+row{
+	padding: 50px;
+}
+
 .mixingDesk{
+	display: block;
 	padding-left: 20px;
 	padding-right: 20px;
-	width: 100%;
+	width: 97%;
+	height: 30%;
 	position: fixed;
 	bottom: 0;
+	overflow-x: auto;
+	background: #fffd;
+	border-radius: 20px;
+	margin-right: 10px !important;
+   margin-left: 10px !important;
+   margin-bottom: 5px;
+}
+
+.sequencerRoll{
+	padding-top: 5;
+	display: block;
+	height: 50%;
+	width: 40% !important;
+	overflow-y: auto;
+	background: #fffd;
+	border-radius: 20px;
+	margin-left: 10px;
 }
 
 .addChannelButton{
@@ -59,17 +90,43 @@ body a:hover{
 	cursor: pointer;
 }
 
-.link{
-	cursor: pointer;
-}
-
-row{
-	padding: 50px;
-}
-
 .sequencerNameDiv{
+	padding-left: 5px;
 	height: 100%;
-	width: 5%;
-	overflow-y: hidden;
-	overflow-wrap: break-word; 
+	width: 15%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.sequencerNameLabel{
+	display: inline;
+}
+
+.navbar{
+	overflow: hidden;
+	background-color: #89cff0;
+   top: 0; /* Position the navbar at the top of the page */
+   width: 100%; /*Full width */
+}
+
+/* Links inside the navbar */
+.navbar a {
+  float: left;
+  display: block;
+  color: #fff;
+  text-align: center;
+  padding: 14px 16px;
+  text-decoration: none;
+}
+
+/* Change background on mouse-over */
+.navbar a:hover {
+	cursor: pointer;
+	color: inherit;
+}
+
+.channelDiv{
+	padding-bottom: 25px;
+	padding-top: 10px;
+	flex-grow: unset !important;
 }
