@@ -22,7 +22,7 @@ function drawChannel(channel){
 	var channelDiv = document.createElement('div');
 	channelDiv.classList.add("col");
 	channelDiv.id = channel.index;
-	channelDiv.style = "padding-bottom: 25px;";
+	channelDiv.classList.add("channelDiv");
 	desk.appendChild(channelDiv);		
 	
 	//create <p> containing channel name
@@ -81,37 +81,42 @@ function drawChannel(channel){
 	channelDiv.appendChild(btnRemove);
 }
 
-function drawSequencer(channel){
+function drawSequencer(channel, isNew){
 	//declare sequencer roll (parent)
 	var sequencerRoll = document.getElementById('sequencerRoll');
 	
 	var seqDiv = document.createElement('div');
-	seqDiv.classList.add("row");
+	seqDiv.classList.add("row");	
 	seqDiv.id = channel.index + "Seq";
 	sequencerRoll.appendChild(seqDiv);
 	
 	//create p with channel name
-	var seqNameTag = document.createElement('p');
-	seqNameTag.id = channel.index + "SeqName";
-	seqNameTag.innerHTML = channel.name;
-	seqDiv.appendChild(seqNameTag)
+	var seqNameDiv = document.createElement('div');
+	seqNameDiv.id = channel.index + "SeqNameDiv";
+	seqNameDiv.classList.add("sequencerNameDiv");
+	seqDiv.appendChild(seqNameDiv);
+	
+	var seqNameLabel = document.createElement('p');
+	seqNameLabel.id = channel.index + "SeqNameLabel";
+	seqNameLabel.classList.add("seqNameLabel");
+	seqNameLabel.innerHTML = channel.name;
+	seqNameDiv.appendChild(seqNameLabel);
 	
 	for (i = 0; i < 8; i++)
 	{
 		//draw each step for channel
-		var btnStep = document.createElement('img');
-		btnStep.src = "resources/pad.png";
+		var btnStep = document.createElement('img');		
 		btnStep.classList.add("step");		
 		
 		var step = new stepObj(channel, i);	
 		channel.stepArray.push(step);
-				
-		btnStep.id = step.channelIndex + "" + step.index;		
+		btnStep.src = "resources/pad.png";
+		
+		btnStep.id = step.channelIndex + "step" + step.index;		
 		seqDiv.appendChild(btnStep);
 		
 		step.click_EventHandler();
 	}
-	
 }
 
 //instantiate new channel object
@@ -169,15 +174,17 @@ function channelObj(chName, chVolume, chPan, chIndex, chSource){
 				document.getElementById(_channel.index + "Mute").id = i + "Mute";
 				document.getElementById(_channel.index + "Remove").id = i + "Remove";
 				
-				//get container for steps delete then call drawSequencer() for given channel to redraw (this works but doesnt save state need to save state then draw with new state)
-				var stepContainer = document.getElementById(_channel.index + "Seq");
-				stepContainer.remove();
+				//change step containers ids then in loop change step ids
+				document.getElementById(_channel.index + "Seq").id = i + "Seq";
+				document.getElementById(_channel.index + "SeqNameDiv").id = i + "SeqNameDiv";
+				document.getElementById(_channel.index + "SeqNameLabel").id = i + "SeqNameLabel";
+				
+				for(n = 0; n < 8; n++){
+					document.getElementById(_channel.index + "step" + n).id = i + "step" + n;
+				}
 				
 				//set index to new place
-				_channel.index = i;
-				
-				drawSequencer(_channel);
-				
+				_channel.index = i;				
 			}
 						
 		});
@@ -219,9 +226,9 @@ function channelObj(chName, chVolume, chPan, chIndex, chSource){
 	
 	//event listner for name change
 	this.nameChange_EventHandler = function(){
-	
+		
 		let chNameTag = document.getElementById(channel.index + "Name");
-		let seqNameTag = document.getElementById(channel.index + "SeqName");
+		let seqNameTag = document.getElementById(channel.index + "SeqNameLabel");
 		
 		chNameTag.addEventListener("dblclick", function(){
 			var newName = prompt("Enter channel name:");
@@ -237,10 +244,8 @@ function channelObj(chName, chVolume, chPan, chIndex, chSource){
 			seqNameTag.innerHTML = newName;
 				
 			channel.name = newName;				
-		});
-		
+		});		
 	}
-	
 }
 
 function stepObj(channel, stepNo){
@@ -250,7 +255,7 @@ function stepObj(channel, stepNo){
 	var step = this;
 	
 	this.click_EventHandler = function(){
-		var stepButton = document.getElementById(step.channelIndex + "" + step.index);
+		var stepButton = document.getElementById(step.channelIndex + "step" + step.index);
 		
 		stepButton.addEventListener("click",function(){
 			if (step.active == false){
@@ -258,7 +263,7 @@ function stepObj(channel, stepNo){
 				step.active = true;
 				//make noise
 			} else {
-				stepButton.src = "resources/pad.png"
+				stepButton.src = "resources/pad.png";
 				step.active = false;
 				//dont make noise
 			}			
@@ -287,7 +292,7 @@ function addChannel(){
 	let newChannel = new channelObj(newChannelName, 0.0, 0.0, channelIndex, source);
 	mixingDeskArray.push(newChannel);
 	drawChannel(newChannel);
-	drawSequencer(newChannel);
+	drawSequencer(newChannel, true);
 
 	newChannel.sliderVolume_EventHandler();
 	newChannel.btnRemove_EventHandler();
