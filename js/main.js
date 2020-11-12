@@ -22,7 +22,7 @@ function drawChannel(channel){
 	var channelDiv = document.createElement('div');
 	channelDiv.classList.add("col");
 	channelDiv.id = channel.index;
-	channelDiv.style = "padding-bottom: 25px;";
+	channelDiv.classList.add("channelDiv");
 	desk.appendChild(channelDiv);		
 	
 	//create <p> containing channel name
@@ -91,6 +91,7 @@ function drawSequencer(channel, isNew){
 	sequencerRoll.appendChild(seqDiv);
 	
 	//create p with channel name
+
 	var seqNameDiv = document.createElement('div');
 	seqNameDiv.id = channel.index + "SeqNameDiv";
 	seqNameDiv.classList.add("sequencerNameDiv");
@@ -98,6 +99,7 @@ function drawSequencer(channel, isNew){
 	
 	var seqNameLabel = document.createElement('p');
 	seqNameLabel.id = channel.index + "SeqNameLabel";
+	seqNameLabel.classList.add("seqNameLabel");
 	seqNameLabel.innerHTML = channel.name;
 	seqNameDiv.appendChild(seqNameLabel);
 	
@@ -111,12 +113,11 @@ function drawSequencer(channel, isNew){
 		channel.stepArray.push(step);
 		btnStep.src = "resources/pad.png";
 		
-		btnStep.id = step.channelIndex + "" + step.index;		
+		btnStep.id = step.channelIndex + "step" + step.index;		
 		seqDiv.appendChild(btnStep);
 		
 		step.click_EventHandler();
 	}
-	
 }
 
 //instantiate new channel object
@@ -180,7 +181,7 @@ function channelObj(chName, chVolume, chPan, chIndex, chSource){
 				document.getElementById(_channel.index + "SeqNameLabel").id = i + "SeqNameLabel";
 				
 				for(n = 0; n < 8; n++){
-					document.getElementById(_channel.index + "" + n).id = i + "" + n;
+					document.getElementById(_channel.index + "step" + n).id = i + "step" + n;
 				}
 				
 				//set index to new place
@@ -255,7 +256,7 @@ function stepObj(channel, stepNo){
 	var step = this;
 	
 	this.click_EventHandler = function(){
-		var stepButton = document.getElementById(step.channelIndex + "" + step.index);
+		var stepButton = document.getElementById(step.channelIndex + "step" + step.index);
 		
 		stepButton.addEventListener("click",function(){
 			if (step.active == false){
