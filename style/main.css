@@ -50,7 +50,7 @@ row{
 	padding-left: 20px;
 	padding-right: 20px;
 	width: 97%;
-	height: 30%;
+	height: 280px;
 	position: fixed;
 	bottom: 0;
 	overflow-x: auto;
@@ -64,7 +64,7 @@ row{
 .sequencerRoll{
 	padding-top: 5;
 	display: block;
-	height: 50%;
+	height: 400px;
 	width: 40% !important;
 	overflow-y: auto;
 	background: #fffd;

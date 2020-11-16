@@ -81,6 +81,7 @@ function drawChannel(channel){
 	channelDiv.appendChild(btnRemove);
 }
 
+//draws elements for sequencer in a channel
 function drawSequencer(channel, isNew){
 	//declare sequencer roll (parent)
 	var sequencerRoll = document.getElementById('sequencerRoll');
@@ -248,6 +249,7 @@ function channelObj(chName, chVolume, chPan, chIndex, chSource){
 	}
 }
 
+//instantiate new step object (individual steps for each channel)
 function stepObj(channel, stepNo){
 	this.index = stepNo;
 	this.channelIndex = channel.index;
