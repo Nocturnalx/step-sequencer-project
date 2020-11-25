@@ -9,6 +9,7 @@
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.6/umd/popper.min.js"></script>
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/js/bootstrap.min.js"></script>
+<script src="lib/Tone.js"></script>
 </head>
 
 <body>
@@ -47,10 +48,23 @@ if (/MSIE (\d+\.\d+);/.test(navigator.userAgent) || navigator.userAgent.indexOf(
 	<div id="sequencerRoll" class="sequencerRoll col">
 	</div>
 
-	<!--Mixing desk-->
-	<div id="desk" class="mixingDesk row">
+	<div class="row bottomBar">
+		<!--Mixing desk-->
+		<div id="desk" class="mixingDesk row">
+		</div>
+		
+		<!--Effects board-->
+		<div id="effects" class="effects">
+			<div>
+				<p>Master: </p>
+				<input type="range" min="-60" max="10" value="0" id="masterVolSlider">
+				<p id="masterVolDisplay"></p>
+			</div>
+		</div>
 	</div>
+	
 </div>
+
 
 <script src="js/main.js"></script>
 </body>

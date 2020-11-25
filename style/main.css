@@ -46,18 +46,31 @@ row{
 }
 
 .mixingDesk{
-	display: block;
 	padding-left: 20px;
 	padding-right: 20px;
-	width: 97%;
+	width: 80%;
 	height: 280px;
-	position: fixed;
 	bottom: 0;
 	overflow-x: auto;
 	background: #fffd;
 	border-radius: 20px;
 	margin-right: 10px !important;
    margin-left: 10px !important;
+   margin-bottom: 5px;
+}
+
+.effects{
+	padding-left: 20px;
+	padding-right: 20px;
+	width: 15%;
+	height: 280px;
+	bottom: 0;
+	overflow-x: auto;
+	float: right;
+	background: #fffd;
+	border-radius: 20px;
+	margin-right: 0px !important;
+   margin-left: 0px !important;
    margin-bottom: 5px;
 }
 
@@ -102,6 +115,14 @@ row{
 	display: inline;
 }
 
+.bottomBar{
+	bottom: 0;
+	position: fixed;
+	width: 100%;
+	margin-right: 5px !important;
+   margin-left: 5px !important;
+}
+
 .navbar{
 	overflow: hidden;
 	background-color: #89cff0;
@@ -128,5 +149,7 @@ row{
 .channelDiv{
 	padding-bottom: 25px;
 	padding-top: 10px;
+	padding-left: 10px;
+	padding-right: 10px:
 	flex-grow: unset !important;
 }
