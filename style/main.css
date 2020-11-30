@@ -153,3 +153,11 @@ row{
 	padding-right: 10px:
 	flex-grow: unset !important;
 }
+
+.effectsDiv{
+	overflow-y: auto;
+	height: 245px;
+	width: 220px !important;
+	margin-right: 25 !important;
+	padding-left: 0px !important;
+}

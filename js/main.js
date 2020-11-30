@@ -1,7 +1,6 @@
 var mixingDeskArray = []; // Set up mixingdesk list
 var playing = false;
 
-var masterVol = 0;
 var masterVolDisplay = document.getElementById('masterVolDisplay');
 var masterVolSlider = document.getElementById('masterVolSlider');
 masterVolDisplay.innerHTML = masterVolSlider.value;
@@ -15,7 +14,6 @@ btnPlay.addEventListener("click", play);
 
 let btnPause = document.getElementById('btnPause');
 btnPause.addEventListener("click", pause);
-
 
 //~~functions~~
 
@@ -37,12 +35,15 @@ function drawChannel(channel){
 	var channelDiv = document.createElement('div');
 	channelDiv.classList.add("col");
 	channelDiv.id = channel.index;
+	channelDiv.style.cursor = "pointer";
+	channelDiv.style.width = "160px"
 	channelContainer.appendChild(channelDiv);		
 	
 	//create <p> containing channel name
 	var channelName = document.createElement('p');
 	channelName.innerHTML = channel.name;
 	channelName.id = channel.index + "Name";
+	channelName.style.cursor = "text";
 	channelDiv.appendChild(channelName);
 	
 	//create slider for volume
@@ -101,25 +102,60 @@ function drawChannel(channel){
 	effectsDiv.id = channel.index + "EffectsDiv";
 	effectsDiv.classList.add('col');
 	effectsDiv.style.display = "none";
+	effectsDiv.classList.add("effectsDiv");
 	channelContainer.appendChild(effectsDiv);
 	
+	//label shoing reverb section
 	var reverbLabel = document.createElement('p');
-	reverbLabel.innerHTML = "Reverb";
+	reverbLabel.innerHTML = "Reverb:";
 	effectsDiv.appendChild(reverbLabel);
 	
-	var reverbSlider = document.createElement('input');
-	reverbSlider.type = "range";
-	reverbSlider.min = 0;
-	reverbSlider.max = 100;
-	reverbSlider.value = channel.reverbValue;
-	reverbSlider.id = channel.index + "ReverbSlider";
-	effectsDiv.appendChild(reverbSlider);
+	//label for reverb room size
+	var roomSizeLabel = document.createElement('p');
+	roomSizeLabel.innerHTML = "Room Size";
+	effectsDiv.appendChild(roomSizeLabel);
 	
-	var reverbDisplay = document.createElement('p');
-	reverbDisplay.id = channel.index + "ReverbDisplay";
-	reverbDisplay.innerHTML = channel.reverbValue;
-	effectsDiv.appendChild(reverbDisplay);
+	//slider for room size
+	var reverbRoomSizeSlider = document.createElement('input');
+	reverbRoomSizeSlider.type = "range";
+	reverbRoomSizeSlider.min = 0;
+	reverbRoomSizeSlider.max = 10;
+	reverbRoomSizeSlider.value = channel.reverbRoomSize * 10;
+	reverbRoomSizeSlider.id = channel.index + "ReverbRoomSizeSlider";
+	effectsDiv.appendChild(reverbRoomSizeSlider);
 	
+	//display for current room size
+	var reverbRoomSizeDisplay = document.createElement('p');
+	reverbRoomSizeDisplay.id = channel.index + "ReverbRoomSizeDisplay";
+	reverbRoomSizeDisplay.innerHTML = channel.reverbRoomSize * 10;
+	effectsDiv.appendChild(reverbRoomSizeDisplay);
+	
+	//label for dampening
+	var reverbDampeningLabel = document.createElement('p');
+	reverbDampeningLabel.innerHTML = "Dampening";
+	effectsDiv.appendChild(reverbDampeningLabel);
+	
+	//slider for reverb dampening
+	var reverbDampeningSlider = document.createElement('input');
+	reverbDampeningSlider.type = "range";
+	reverbDampeningSlider.min = 0;
+	reverbDampeningSlider.max = 10000;
+	reverbDampeningSlider.value = channel.reverbDampening;
+	reverbDampeningSlider.id = channel.index + "ReverbDampeningSlider";
+	effectsDiv.appendChild(reverbDampeningSlider);
+	
+	//display for current room size
+	var reverbDampeningDisplay = document.createElement('p');
+	reverbDampeningDisplay.id = channel.index + "ReverbDampeningDisplay";
+	reverbDampeningDisplay.innerHTML = channel.reverbDampening;
+	effectsDiv.appendChild(reverbDampeningDisplay);
+	
+	var reverbConnectButton = document.createElement('input');
+	reverbConnectButton.type = "button";
+	reverbConnectButton.id = channel.index + "btnReverbConnect";
+	reverbConnectButton.classList.add("button");
+	reverbConnectButton.value = "Connect";
+	effectsDiv.appendChild(reverbConnectButton);
 }
 
 //draws elements for sequencer in a channel
@@ -168,27 +204,45 @@ function channelObj(chName, chVolume, chPan, chIndex){
 	this.volume = chVolume;
 	this.index = chIndex;
 	this.muted = false;
-	this.reverbValue = 0;
 	this.effectsShowing = false;
+	var busArr = [];
+	this.bus = busArr;
 	var channel = this;
-	
+
 	var arr1 = [];
 	this.stepArray = arr1;
 	var arr2 = []
 	this.noteArray = arr2;
 	
+	//SYNTH AND SEQUENCE
+	
+	//create synth node, add to bus, add bus to master
 	this.synth = new Tone.MembraneSynth();
 	channel.synth.volume.value = channel.volume;
-	channel.synth.connect(Tone.Master);
 	
+	channel.bus.push(channel.synth);
+	channel.bus[channel.bus.length - 1].toMaster();
+	
+	//create sequence for synth from array
 	this.sequence = new Tone.Sequence(function(time, note) {
 		channel.synth.triggerAttackRelease(note,"8n");
 	}, channel.noteArray, "8n");	
-	
 	channel.sequence.start();
 	
+	//EFFECTS HERE
+	
+	//reverb node
+	this.reverbConnected = false;
+	this.reverbRoomSize = 0.3;
+	this.reverbDampening = 3000;
+	this.reverb = new Tone.Freeverb(channel.reverbRoomSize, channel.reverbDampening);
+	
+	//EVENT LISTENERS AND METHODS
+	
+	//event listener for volume slider
 	this.sliderVolume_EventHandler = function(){
 		let slider = document.getElementById(channel.index + "Vol");
+		
 		slider.addEventListener("input", function(){	
 			channel.volume = slider.value;
 			
@@ -200,7 +254,8 @@ function channelObj(chName, chVolume, chPan, chIndex){
 		});
 	}
 	
-	this.btnRemove_EventHandler = function(){ //IF NAME EXISTS WHEN ADD CHANNEL IS CLICKED IT NEEDS TO CHANGE ITS NAME TO "ch x(x)" do this in addChannel()
+	//IF NAME EXISTS WHEN ADD CHANNEL IS CLICKED IT NEEDS TO CHANGE ITS NAME TO "ch x(x)" do this in addChannel()
+	this.btnRemove_EventHandler = function(){ 
 	
 		let btnRemove = document.getElementById(channel.index + "Remove");
 		btnRemove.addEventListener("click", function(){
@@ -211,7 +266,12 @@ function channelObj(chName, chVolume, chPan, chIndex){
 			
 			var rollDiv = document.getElementById(channel.index + "Seq");
 			rollDiv.remove();
-				
+			
+			channel.synth.dispose();
+			channel.reverb.dispose();
+			channel.sequence.stop();
+			channel.sequence.dispose();
+			
 			//splice to get rid of item from middle of array
 			mixingDeskArray.splice(channel.index,1);
 			
@@ -222,39 +282,42 @@ function channelObj(chName, chVolume, chPan, chIndex){
 				//use old index to get then set new ids
 				
 				//container
-				document.getElementById(_channel.index + "Container").id = i + "Container";
+				remove("Container", _channel.index, i);
 				
 				//change channels ids
-				document.getElementById(_channel.index).id = i;
-				document.getElementById(_channel.index + "Name").id = i + "Name";
-				document.getElementById(_channel.index + "Vol").id = i + "Vol";
-				document.getElementById(_channel.index + "VolDisplay").id = i + "VolDisplay";
-				document.getElementById(_channel.index + "Pan").id = i + "Pan";
-				document.getElementById(_channel.index + "PanDisplay").id = i + "PanDisplay";
-				document.getElementById(_channel.index + "Mute").id = i + "Mute";
-				document.getElementById(_channel.index + "Remove").id = i + "Remove";
+				remove("", _channel.index, i);
+				remove("Name", _channel.index, i);
+				remove("Vol", _channel.index, i);
+				remove("VolDisplay", _channel.index, i);
+				remove("Pan", _channel.index, i);
+				remove("PanDisplay", _channel.index, i);
+				remove("Mute", _channel.index, i);
+				remove("Remove", _channel.index, i);
 				
 				//change step containers ids
-				document.getElementById(_channel.index + "Seq").id = i + "Seq";
-				document.getElementById(_channel.index + "SeqNameDiv").id = i + "SeqNameDiv";
-				document.getElementById(_channel.index + "SeqNameLabel").id = i + "SeqNameLabel";
+				remove("Seq", _channel.index, i);
+				remove("SeqNameDiv", _channel.index, i);
+				remove("SeqNameLabel", _channel.index, i);
 				
 				for(n = 0; n < 8; n++){
-					document.getElementById(_channel.index + "step" + n).id = i + "step" + n;
+					remove("step" + n, _channel.index, i)
 				}
 				
 				//change effects containers ids
-				document.getElementById(_channel.index + "EffectsDiv").id = i + "EffectsDiv";
-				document.getElementById(_channel.index + "ReverbSlider").id = i + "ReverbSlider";
-				document.getElementById(_channel.index + "ReverbDisplay").id = i + "ReverbDisplay";
+				remove("EffectsDiv", _channel.index, i);
+				remove("ReverbRoomSizeSlider", _channel.index, i);
+				remove("ReverbRoomSizeDisplay", _channel.index, i);
+				remove("ReverbDampeningSlider", _channel.index, i);
+				remove("ReverbDampeningDisplay", _channel.index, i);
+				remove("btnReverbConnect", _channel.index, i);
 				
 				//set index to new place
 				_channel.index = i;				
-			}
-						
+			}			
 		});
 	}
 	
+	//event listener for mute button
 	this.btnMute_EventHandler = function(){
 		let btnMute = document.getElementById(channel.index + "Mute");
 		btnMute.addEventListener("click", function(){
@@ -266,13 +329,12 @@ function channelObj(chName, chVolume, chPan, chIndex){
 				channel.muted = true;
 				volumeDisplay.innerHTML = "Muted";
 				
-				//just mute the source but not turn slider down can show mute with volume display paragraph
-				//source.volume = 0
+				channel.synth.volume.value = -100;
 			} else{
 				channel.muted = false;
 				volumeDisplay.innerHTML = channel.volume;
-				//unmute
-				//source.volume = channel.volume
+				
+				channel.synth.volume.value = channel.volume;
 			}
 		});
 	}
@@ -286,6 +348,8 @@ function channelObj(chName, chVolume, chPan, chIndex){
 			
 			let panDisplay = document.getElementById(channel.index + "PanDisplay");
 			panDisplay.innerHTML = pan;
+			
+			
 		});
 	}
 	
@@ -295,7 +359,7 @@ function channelObj(chName, chVolume, chPan, chIndex){
 		let chNameTag = document.getElementById(channel.index + "Name");
 		let seqNameTag = document.getElementById(channel.index + "SeqNameLabel");
 		
-		chNameTag.addEventListener("dblclick", function(){
+		chNameTag.addEventListener("click", function(){
 			var newName = prompt("Enter channel name:");
 			chNameTag.innerHTML = newName;		
 			seqNameTag.innerHTML = newName;
@@ -313,22 +377,68 @@ function channelObj(chName, chVolume, chPan, chIndex){
 	}
 
 	//event listener for reverb slider
-	this.sliderReverb_EventHandler = function(){
-		let reverbSlider = document.getElementById(channel.index + "ReverbSlider");
-		reverbSlider.addEventListener("input", function(){
-			let reverbValue = reverbSlider.value;
-			channel.reverbValue = reverbValue;
+	this.sliderReverbRoomSize_EventHandler = function(){
+		let reverbRoomSizeSlider = document.getElementById(channel.index + "ReverbRoomSizeSlider");
+		reverbRoomSizeSlider.addEventListener("input", function(){
+			//get slider value and set variable
+			let reverbRoomSize = reverbRoomSizeSlider.value;	//this is wet value * 10
+			channel.reverbRoomSize = reverbRoomSize / 10;
 			
-			let reverbDisplay = document.getElementById(channel.index + "ReverbDisplay");
-			reverbDisplay.innerHTML = reverbValue;
+			//change reverb display text		
+			let reverbRoomSizeDisplay = document.getElementById(channel.index + "ReverbRoomSizeDisplay");
+			reverbRoomSizeDisplay.innerHTML = reverbRoomSize;
+			
+			if (channel.reverbConnected == true){
+				//dispose and recreate reverb
+				channel.synth.disconnect(channel.reverb);
+				channel.reverb.dispose();
+			
+				channel.reverb = new Tone.Freeverb(channel.reverbRoomSize, channel.reverbDampening);
+			
+				channel.synth.connect(channel.reverb);
+				channel.reverb.toMaster();
+			}
+		});
+	}
+	
+	//event listener for reverb dampening
+	this.sliderReverbDampening_EventHandler = function(){
+		let reverbDampeningSlider = document.getElementById(channel.index + "ReverbDampeningSlider");
+		reverbDampeningSlider.addEventListener("input", function(){
+			//get slider value and set variable
+			channel.reverbDampening = reverbDampeningSlider.value;
+			
+			//change display text
+			let reverbDampeningDisplay = document.getElementById(channel.index + "ReverbDampeningDisplay");
+			reverbDampeningDisplay.innerHTML = channel.reverbDampening;
+			
+			if (channel.reverbConnected == true){
+				//dispose and recreate reverb
+				channel.synth.disconnect(channel.reverb);
+				channel.reverb.dispose();
+				
+				channel.reverb = new Tone.Freeverb(channel.reverbRoomSize, channel.reverbDampening);
+				
+				channel.synth.connect(channel.reverb);
+				channel.reverb.toMaster();
+			}
+		});
+	}
+	
+	//event listener for cconnect/disconnect button
+	this.btnReverbConnect_EventHandler = function(){
+		let btnReverbConnect = document.getElementById(channel.index + "btnReverbConnect");
+		btnReverbConnect.addEventListener("click", function(){
+		
+			channel.reverbConnected = channel.addRemoveEffect(channel.reverb, channel.reverbConnected, btnReverbConnect);
 		});
 	}
 	
 	//event listener for double click to show effects
 	this.showEffects_EventHandler = function(){
-		var channelDiv = document.getElementById(channel.index + "Container");
-		channelDiv.addEventListener("click", function(){
+		var channelDiv = document.getElementById(channel.index);
 		
+		channelDiv.addEventListener("dblclick", function(){	
 			let effectsDiv = document.getElementById(channel.index + "EffectsDiv");
 			
 			if (channel.effectsShowing == false){
@@ -358,6 +468,28 @@ function channelObj(chName, chVolume, chPan, chIndex){
 		
 		if (playing == true){
 			Tone.Transport.start();
+		}
+	};
+	
+	//funtion to connect or disconnect the effect, returns the new state of whether its connected or not
+	this.addRemoveEffect = function(effect, isConnected, button){
+	
+		if(isConnected == false){	
+			button.value = "Disconnect";
+			
+			channel.bus.disconnect(Tone.Master);
+			channel.bus = channel.bus.connect(effect);
+			channel.bus.toMaster;
+			
+			return true;
+		} else {
+			button.value = "Connect";
+			
+			channel.bus.disconnect(Tone.Master);
+			channel.bus = channel.bus.disconnect(effect);
+			channel.bus.toMaster();
+			
+			return false;
 		}
 	};
 }
@@ -412,13 +544,16 @@ function addChannel(){
 	mixingDeskArray.push(newChannel);
 	drawChannel(newChannel);
 	drawSequencer(newChannel, true);
-
+	
+	//need to call these after draw as the html elements dont exist yet 
 	newChannel.sliderVolume_EventHandler();
 	newChannel.btnRemove_EventHandler();
 	newChannel.btnMute_EventHandler();
 	newChannel.sliderPan_EventHandler();
 	newChannel.nameChange_EventHandler();
-	newChannel.sliderReverb_EventHandler();
+	newChannel.sliderReverbRoomSize_EventHandler();
+	newChannel.sliderReverbDampening_EventHandler();
+	newChannel.btnReverbConnect_EventHandler();
 	newChannel.showEffects_EventHandler();
 }
 
@@ -432,11 +567,27 @@ function pause(){
 	playing = false;
 }
 
-//non channel specific event handlers
+function remove(string, oldIndex, newIndex){
+	document.getElementById(oldIndex + string).id = newIndex + string;
+}
+
+//misc event handlers
 
 //master volume change
 masterVolSlider.addEventListener("input", function(){
-	var val = masterVolSlider.value;
-	masterVolDisplay.innerHTML = val;
-	masterVol = val;
+	var masterVol = masterVolSlider.value;
+	masterVolDisplay.innerHTML = masterVol;
+	
+	Tone.Master.volume.value = masterVol;
 });
+
+//spacebar press plays and pauses
+document.body.onkeyup = function(e){
+    if(e.keyCode == 32){
+        if (playing == false){
+        	play();
+        } else {
+        	pause();
+        }
+    }
+}
