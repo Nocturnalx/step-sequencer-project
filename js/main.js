@@ -205,8 +205,8 @@ function channelObj(chName, chVolume, chPan, chIndex){
 	this.index = chIndex;
 	this.muted = false;
 	this.effectsShowing = false;
-	var busArr = [];
-	this.bus = busArr;
+	var nodeArr = [];
+	this.nodeArray = nodeArr;
 	var channel = this;
 
 	var arr1 = [];
@@ -216,12 +216,17 @@ function channelObj(chName, chVolume, chPan, chIndex){
 	
 	//SYNTH AND SEQUENCE
 	
-	//create synth node, add to bus, add bus to master
+	//create synth node, add to array
 	this.synth = new Tone.MembraneSynth();
 	channel.synth.volume.value = channel.volume;
+	channel.nodeArray.push(channel.synth);
 	
-	channel.bus.push(channel.synth);
-	channel.bus[channel.bus.length - 1].toMaster();
+	//create pan node, add to array
+	this.pan = new Tone.PanVol(0,0);
+	channel.nodeArray.push(channel.pan);
+	
+	//code to apply final node in array to master
+	channel.nodeArray[channel.nodeArray.length - 1].toMaster();
 	
 	//create sequence for synth from array
 	this.sequence = new Tone.Sequence(function(time, note) {
@@ -349,7 +354,7 @@ function channelObj(chName, chVolume, chPan, chIndex){
 			let panDisplay = document.getElementById(channel.index + "PanDisplay");
 			panDisplay.innerHTML = pan;
 			
-			
+			//use pan.set 
 		});
 	}
 	
@@ -389,7 +394,7 @@ function channelObj(chName, chVolume, chPan, chIndex){
 			reverbRoomSizeDisplay.innerHTML = reverbRoomSize;
 			
 			if (channel.reverbConnected == true){
-				//dispose and recreate reverb
+				//dispose and recreate reverb (this is old and will not work when added new effects before, should replace synth with pre from node array or use reverb.set)
 				channel.synth.disconnect(channel.reverb);
 				channel.reverb.dispose();
 			
@@ -413,7 +418,7 @@ function channelObj(chName, chVolume, chPan, chIndex){
 			reverbDampeningDisplay.innerHTML = channel.reverbDampening;
 			
 			if (channel.reverbConnected == true){
-				//dispose and recreate reverb
+				//dispose and recreate reverb (this is old and will not work when added new effects before, should replace synth with pre from node array or use reverb.set)
 				channel.synth.disconnect(channel.reverb);
 				channel.reverb.dispose();
 				
@@ -429,8 +434,16 @@ function channelObj(chName, chVolume, chPan, chIndex){
 	this.btnReverbConnect_EventHandler = function(){
 		let btnReverbConnect = document.getElementById(channel.index + "btnReverbConnect");
 		btnReverbConnect.addEventListener("click", function(){
-		
-			channel.reverbConnected = channel.addRemoveEffect(channel.reverb, channel.reverbConnected, btnReverbConnect);
+			
+			//checks whether connected or not then connects or disconnects. returns whether node is now connected
+			channel.reverbConnected = channel.addRemoveNode(channel.reverb, channel.reverbConnected, btnReverbConnect);
+			
+			//change button text 
+			if (channel.reverbConnected == true){
+				btnReverbConnect.value = "Disconnect";
+			}	else {
+				btnReverbConnect.value = "Connect";
+			}
 		});
 	}
 	
@@ -471,28 +484,28 @@ function channelObj(chName, chVolume, chPan, chIndex){
 		}
 	};
 	
-	//funtion to connect or disconnect the effect, returns the new state of whether its connected or not
-	this.addRemoveEffect = function(effect, isConnected, button){
+	//funtion to connect or disconnect the node, returns the new state of whether its connected or not
+	this.addRemoveNode = function(node, isConnected){
 	
-		if(isConnected == false){	
-			button.value = "Disconnect";
+		if(isConnected == false){
+			//array.length is node new position before it gets pushed
+			var pre = channel.nodeArray[channel.nodeArray.length - 1];	
+						
+			//separate end node from master
+			pre.disconnect(Tone.Master);
 			
+			//connect pre to new node
+			pre.connect(node);
 			
-			effect.connect(channel.bus[channel.bus.length - 1]);
+			//connect new node to master
+			node.toMaster();
 			
-			channel.bus.push(effect);
-			
-			channel.bus.disconnect(Tone.Master);
-			channel.bus = channel.bus.connect(effect);
-			channel.bus.toMaster;
+			//add new node to array
+			channel.nodeArray.push(effect);
 			
 			return true;
-		} else {
-			button.value = "Connect";
-			
-			channel.bus.disconnect(Tone.Master);
-			channel.bus = channel.bus.disconnect(effect);
-			channel.bus.toMaster();
+		} else {	
+			//separate from pre and post, remove from array, shift array down, connect pre and post
 			
 			return false;
 		}
