@@ -477,6 +477,11 @@ function channelObj(chName, chVolume, chPan, chIndex){
 		if(isConnected == false){	
 			button.value = "Disconnect";
 			
+			
+			effect.connect(channel.bus[channel.bus.length - 1]);
+			
+			channel.bus.push(effect);
+			
 			channel.bus.disconnect(Tone.Master);
 			channel.bus = channel.bus.connect(effect);
 			channel.bus.toMaster;
