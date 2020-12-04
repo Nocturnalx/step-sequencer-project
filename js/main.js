@@ -95,7 +95,7 @@ function drawChannel(channel){
 	btnRemove.classList.add("button");
 	channelDiv.appendChild(btnRemove);
 	
-	//EFFECTS DIV
+	//EFFECTS DIV (should change this so its recursive)
 	
 	//div containing effects info
 	var effectsDiv = document.createElement('div');
@@ -119,15 +119,15 @@ function drawChannel(channel){
 	var reverbRoomSizeSlider = document.createElement('input');
 	reverbRoomSizeSlider.type = "range";
 	reverbRoomSizeSlider.min = 0;
-	reverbRoomSizeSlider.max = 10;
-	reverbRoomSizeSlider.value = channel.reverbRoomSize * 10;
+	reverbRoomSizeSlider.max = 100;
+	reverbRoomSizeSlider.value = channel.reverbRoomSize * 100;
 	reverbRoomSizeSlider.id = channel.index + "ReverbRoomSizeSlider";
 	effectsDiv.appendChild(reverbRoomSizeSlider);
 	
 	//display for current room size
 	var reverbRoomSizeDisplay = document.createElement('p');
 	reverbRoomSizeDisplay.id = channel.index + "ReverbRoomSizeDisplay";
-	reverbRoomSizeDisplay.innerHTML = channel.reverbRoomSize * 10;
+	reverbRoomSizeDisplay.innerHTML = channel.reverbRoomSize;
 	effectsDiv.appendChild(reverbRoomSizeDisplay);
 	
 	//label for dampening
@@ -139,8 +139,8 @@ function drawChannel(channel){
 	var reverbDampeningSlider = document.createElement('input');
 	reverbDampeningSlider.type = "range";
 	reverbDampeningSlider.min = 0;
-	reverbDampeningSlider.max = 10000;
-	reverbDampeningSlider.value = channel.reverbDampening;
+	reverbDampeningSlider.max = 100;
+	reverbDampeningSlider.value = Math.sqrt(channel.reverbDampening);
 	reverbDampeningSlider.id = channel.index + "ReverbDampeningSlider";
 	effectsDiv.appendChild(reverbDampeningSlider);
 	
@@ -222,10 +222,13 @@ function channelObj(chName, chVolume, chPan, chIndex){
 	channel.nodeArray.push(channel.synth);
 	
 	//create pan node, add to array
-	this.pan = new Tone.PanVol(0,0);
-	channel.nodeArray.push(channel.pan);
+	this.panNode = new Tone.PanVol(0,0);
+	channel.nodeArray.push(channel.panNode);
 	
-	//code to apply final node in array to master
+	//connect synth to pan
+	channel.synth.connect(channel.panNode);
+	
+	//apply final node in array to master
 	channel.nodeArray[channel.nodeArray.length - 1].toMaster();
 	
 	//create sequence for synth from array
@@ -240,6 +243,7 @@ function channelObj(chName, chVolume, chPan, chIndex){
 	this.reverbConnected = false;
 	this.reverbRoomSize = 0.3;
 	this.reverbDampening = 3000;
+	this.reverbIndex;
 	this.reverb = new Tone.Freeverb(channel.reverbRoomSize, channel.reverbDampening);
 	
 	//EVENT LISTENERS AND METHODS
@@ -280,7 +284,7 @@ function channelObj(chName, chVolume, chPan, chIndex){
 			//splice to get rid of item from middle of array
 			mixingDeskArray.splice(channel.index,1);
 			
-			//set indexes of all new arrays to theyre new place
+			//set indexes of all new arrays to their new place
 			for(i = channel.index; i < mixingDeskArray.length; i++){
 				// "_" prefix is shifted channels
 				let _channel = mixingDeskArray[i];
@@ -355,6 +359,9 @@ function channelObj(chName, chVolume, chPan, chIndex){
 			panDisplay.innerHTML = pan;
 			
 			//use pan.set 
+			
+			channel.panNode.pan.value = pan / 50;
+			
 		});
 	}
 	
@@ -386,22 +393,14 @@ function channelObj(chName, chVolume, chPan, chIndex){
 		let reverbRoomSizeSlider = document.getElementById(channel.index + "ReverbRoomSizeSlider");
 		reverbRoomSizeSlider.addEventListener("input", function(){
 			//get slider value and set variable
-			let reverbRoomSize = reverbRoomSizeSlider.value;	//this is wet value * 10
-			channel.reverbRoomSize = reverbRoomSize / 10;
+			let reverbRoomSize = reverbRoomSizeSlider.value / 100;
 			
 			//change reverb display text		
 			let reverbRoomSizeDisplay = document.getElementById(channel.index + "ReverbRoomSizeDisplay");
 			reverbRoomSizeDisplay.innerHTML = reverbRoomSize;
 			
 			if (channel.reverbConnected == true){
-				//dispose and recreate reverb (this is old and will not work when added new effects before, should replace synth with pre from node array or use reverb.set)
-				channel.synth.disconnect(channel.reverb);
-				channel.reverb.dispose();
-			
-				channel.reverb = new Tone.Freeverb(channel.reverbRoomSize, channel.reverbDampening);
-			
-				channel.synth.connect(channel.reverb);
-				channel.reverb.toMaster();
+				channel.reverb.roomSize.value = reverbRoomSize;
 			}
 		});
 	}
@@ -411,21 +410,14 @@ function channelObj(chName, chVolume, chPan, chIndex){
 		let reverbDampeningSlider = document.getElementById(channel.index + "ReverbDampeningSlider");
 		reverbDampeningSlider.addEventListener("input", function(){
 			//get slider value and set variable
-			channel.reverbDampening = reverbDampeningSlider.value;
+			channel.reverbDampening = Math.pow(reverbDampeningSlider.value, 2);
 			
 			//change display text
 			let reverbDampeningDisplay = document.getElementById(channel.index + "ReverbDampeningDisplay");
 			reverbDampeningDisplay.innerHTML = channel.reverbDampening;
 			
 			if (channel.reverbConnected == true){
-				//dispose and recreate reverb (this is old and will not work when added new effects before, should replace synth with pre from node array or use reverb.set)
-				channel.synth.disconnect(channel.reverb);
-				channel.reverb.dispose();
-				
-				channel.reverb = new Tone.Freeverb(channel.reverbRoomSize, channel.reverbDampening);
-				
-				channel.synth.connect(channel.reverb);
-				channel.reverb.toMaster();
+				channel.reverb.dampening.value = channel.reverbDampening;
 			}
 		});
 	}
@@ -436,13 +428,19 @@ function channelObj(chName, chVolume, chPan, chIndex){
 		btnReverbConnect.addEventListener("click", function(){
 			
 			//checks whether connected or not then connects or disconnects. returns whether node is now connected
-			channel.reverbConnected = channel.addRemoveNode(channel.reverb, channel.reverbConnected, btnReverbConnect);
+			channel.reverbIndex = channel.addRemoveNode(channel.reverb, channel.reverbIndex, channel.reverbConnected);
+			
+			for (i = 0;i < channel.nodeArray.length;i++){
+				console.log(channel.nodeArray[i]);
+			}
 			
 			//change button text 
-			if (channel.reverbConnected == true){
+			if (channel.reverbConnected == false){
 				btnReverbConnect.value = "Disconnect";
+				channel.reverbConnected = true;
 			}	else {
 				btnReverbConnect.value = "Connect";
+				channel.reverbConnected = false;
 			}
 		});
 	}
@@ -485,10 +483,10 @@ function channelObj(chName, chVolume, chPan, chIndex){
 	};
 	
 	//funtion to connect or disconnect the node, returns the new state of whether its connected or not
-	this.addRemoveNode = function(node, isConnected){
+	this.addRemoveNode = function(node, nodeIndex, isConnected){
 	
 		if(isConnected == false){
-			//array.length is node new position before it gets pushed
+			//get final node in array (array.length is node new position before it gets pushed)
 			var pre = channel.nodeArray[channel.nodeArray.length - 1];	
 						
 			//separate end node from master
@@ -500,14 +498,34 @@ function channelObj(chName, chVolume, chPan, chIndex){
 			//connect new node to master
 			node.toMaster();
 			
+			var nodeIndex = channel.nodeArray.length;
 			//add new node to array
-			channel.nodeArray.push(effect);
+			channel.nodeArray.push(node);
 			
-			return true;
-		} else {	
-			//separate from pre and post, remove from array, shift array down, connect pre and post
+			return nodeIndex;
+		} else {		
 			
-			return false;
+			var pre = channel.nodeArray[(nodeIndex - 1)];
+			var post;
+			
+			if (nodeIndex == channel.nodeArray.length - 1){
+				post = Tone.Master;
+			} else {
+				post = channel.nodeArray[nodeIndex + 1];
+			}
+			
+			//separate from pre and post
+			pre.disconnect(node);
+			node.disconnect(post);
+		
+			//remove from array splice leave no "holes" and dispose node
+			channel.nodeArray.splice(nodeIndex, 1);
+			node.dispose();
+			
+			//connect pre and post
+			pre.connect(post);
+			
+			return -1;
 		}
 	};
 }
@@ -588,6 +606,7 @@ function pause(){
 function remove(string, oldIndex, newIndex){
 	document.getElementById(oldIndex + string).id = newIndex + string;
 }
+
 
 //misc event handlers
 
