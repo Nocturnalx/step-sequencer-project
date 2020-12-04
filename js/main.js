@@ -388,6 +388,8 @@ function channelObj(chName, chVolume, chPan, chIndex){
 		});		
 	}
 
+	//START OF REVERB EFFECT STUFF, tihs is to be moved to effects object
+
 	//event listener for reverb slider
 	this.sliderReverbRoomSize_EventHandler = function(){
 		let reverbRoomSizeSlider = document.getElementById(channel.index + "ReverbRoomSizeSlider");
@@ -430,10 +432,6 @@ function channelObj(chName, chVolume, chPan, chIndex){
 			//checks whether connected or not then connects or disconnects. returns whether node is now connected
 			channel.reverbIndex = channel.addRemoveNode(channel.reverb, channel.reverbIndex, channel.reverbConnected);
 			
-			for (i = 0;i < channel.nodeArray.length;i++){
-				console.log(channel.nodeArray[i]);
-			}
-			
 			//change button text 
 			if (channel.reverbConnected == false){
 				btnReverbConnect.value = "Disconnect";
@@ -444,6 +442,8 @@ function channelObj(chName, chVolume, chPan, chIndex){
 			}
 		});
 	}
+	
+	//END OF REVERB EFFECT STUFF
 	
 	//event listener for double click to show effects
 	this.showEffects_EventHandler = function(){
@@ -520,7 +520,6 @@ function channelObj(chName, chVolume, chPan, chIndex){
 		
 			//remove from array splice leave no "holes" and dispose node
 			channel.nodeArray.splice(nodeIndex, 1);
-			node.dispose();
 			
 			//connect pre and post
 			pre.connect(post);
@@ -557,8 +556,12 @@ function stepObj(channel, stepNo){
 			}			
 		});
 	}
-	
 }
+
+//create object which intantiates all effects for a class and holds default values 
+//(or create json file containing values) 
+//(will look like channel.effects.reverbVolume or whatever just tidys up a bitchannel is super clustered)
+//need to create function that draws effects into effects div recursively otherwise draw channel is going to be longer than olly wright
 
 //add channel to channel list and draw it
 function addChannel(){
