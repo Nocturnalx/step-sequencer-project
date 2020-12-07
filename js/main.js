@@ -36,7 +36,8 @@ function drawChannel(channel){
 	channelDiv.classList.add("col");
 	channelDiv.id = channel.index;
 	channelDiv.style.cursor = "pointer";
-	channelDiv.style.width = "160px"
+    channelDiv.style.width = "160px";
+    channelDiv.style.overflow = "hidden";
 	channelContainer.appendChild(channelDiv);		
 	
 	//create <p> containing channel name
@@ -106,7 +107,7 @@ function drawChannel(channel){
 }
 
 //draws elements for sequencer in a channel
-function drawSequencer(channel, isNew){
+function drawSequencer(channel){
 	//declare sequencer roll (parent)
 	var sequencerRoll = document.getElementById('sequencerRoll');
 	
@@ -144,61 +145,50 @@ function drawSequencer(channel, isNew){
 	}
 }
 
-//draw effects to effects div
 function drawEffects(channel){
-	var effectsDiv = document.getElementById(channel.index + 'EffectsDiv');
+    var effectsDiv = document.getElementById(channel.index + 'EffectsDiv');
+    var effectsArray = channel.effects.effectsArray;
 
-	//label shoing reverb section
-	var reverbLabel = document.createElement('p');
-	reverbLabel.innerHTML = "Reverb:";
-	effectsDiv.appendChild(reverbLabel);
-	
-	//label for reverb room size
-	var roomSizeLabel = document.createElement('p');
-	roomSizeLabel.innerHTML = "Room Size";
-	effectsDiv.appendChild(roomSizeLabel);
-	
-	//slider for room size
-	var reverbRoomSizeSlider = document.createElement('input');
-	reverbRoomSizeSlider.type = "range";
-	reverbRoomSizeSlider.min = 0;
-	reverbRoomSizeSlider.max = 100;
-	reverbRoomSizeSlider.value = channel.effects.reverb.reverbRoomSize * 100;
-	reverbRoomSizeSlider.id = channel.index + "ReverbRoomSizeSlider";
-	effectsDiv.appendChild(reverbRoomSizeSlider);
-	
-	//display for current room size
-	var reverbRoomSizeDisplay = document.createElement('p');
-	reverbRoomSizeDisplay.id = channel.index + "ReverbRoomSizeDisplay";
-	reverbRoomSizeDisplay.innerHTML = channel.effects.reverb.reverbRoomSize;
-	effectsDiv.appendChild(reverbRoomSizeDisplay);
-	
-	//label for dampening
-	var reverbDampeningLabel = document.createElement('p');
-	reverbDampeningLabel.innerHTML = "Dampening";
-	effectsDiv.appendChild(reverbDampeningLabel);
-	
-	//slider for reverb dampening
-	var reverbDampeningSlider = document.createElement('input');
-	reverbDampeningSlider.type = "range";
-	reverbDampeningSlider.min = 0;
-	reverbDampeningSlider.max = 100;
-	reverbDampeningSlider.value = Math.sqrt(channel.effects.reverb.reverbDampening);
-	reverbDampeningSlider.id = channel.index + "ReverbDampeningSlider";
-	effectsDiv.appendChild(reverbDampeningSlider);
-	
-	//display for current room size
-	var reverbDampeningDisplay = document.createElement('p');
-	reverbDampeningDisplay.id = channel.index + "ReverbDampeningDisplay";
-	reverbDampeningDisplay.innerHTML = channel.effects.reverb.reverbDampening;
-	effectsDiv.appendChild(reverbDampeningDisplay);
-	
-	var reverbConnectButton = document.createElement('input');
-	reverbConnectButton.type = "button";
-	reverbConnectButton.id = channel.index + "btnReverbConnect";
-	reverbConnectButton.classList.add("button");
-	reverbConnectButton.value = "Connect";
-	effectsDiv.appendChild(reverbConnectButton);
+    for (i = 0; i < effectsArray.length; i++) {
+        var effect = effectsArray[i];
+
+        //create label
+        var effectLabel = document.createElement('p');
+        effectLabel.innerHTML = effect.name;
+        effectsDiv.appendChild(effectLabel);
+
+        //create label, slider and display for each parameter of effect
+        var parameterArray = effect.parameterArray;
+
+        for (i = 0; i < parameterArray.length; i++) {
+            var parameter = parameterArray[i];
+
+            var parameterLabel = document.createElement('p');
+            parameterLabel.innerHTML = parameter.name;
+            effectsDiv.appendChild(parameterLabel);
+
+            var parameterSlider = document.createElement('input');
+            parameterSlider.type = "range";
+            parameterSlider.min = parameter.min;
+            parameterSlider.max = parameter.max;
+            parameterSlider.value = parameter.sliderValue;
+            parameterSlider.id = channel.index + parameter.idName + "Slider";
+            effectsDiv.appendChild(parameterSlider);
+
+            var parameterDisplay = document.createElement('p');
+            parameterDisplay.innerHTML = parameter.defaultValue;
+            parameterDisplay.id = channel.index + parameter.idName + "Display";
+            effectsDiv.appendChild(parameterDisplay);
+        }
+
+        //create button
+        var effectButton = document.createElement('input');
+        effectButton.type = "button";
+        effectButton.value = "connect";
+        effectButton.id = channel.index + "btn" + effect.name;
+        effectButton.classList.add("button");
+        effectsDiv.appendChild(effectButton);
+    }
 }
 
 //instantiate new channel object
@@ -215,7 +205,7 @@ function channelObj(chName, chVolume, chPan, chIndex){
 
 	var arr1 = [];
 	this.stepArray = arr1;
-	var arr2 = []
+    var arr2 = [null,null,null,null,null,null,null,null];
 	this.noteArray = arr2;
 	
 	//SYNTH AND SEQUENCE
@@ -252,7 +242,7 @@ function channelObj(chName, chVolume, chPan, chIndex){
 		slider.addEventListener("input", function(){	
 			channel.volume = slider.value;
 			
-			if(channel.muted == false){
+			if(channel.muted === false){
 				let volumeDisplay = document.getElementById(channel.index + "VolDisplay");
 				volumeDisplay.innerHTML = channel.volume;
 				channel.synth.volume.value = channel.volume;
@@ -303,7 +293,7 @@ function channelObj(chName, chVolume, chPan, chIndex){
 				remove("SeqNameLabel", _channel.index, i);
 				
 				for(n = 0; n < 8; n++){
-					remove("step" + n, _channel.index, i)
+                    remove("step" + n, _channel.index, i);
 				}
 				
 				//change effects containers ids
@@ -312,7 +302,7 @@ function channelObj(chName, chVolume, chPan, chIndex){
 				remove("ReverbRoomSizeDisplay", _channel.index, i);
 				remove("ReverbDampeningSlider", _channel.index, i);
 				remove("ReverbDampeningDisplay", _channel.index, i);
-				remove("btnReverbConnect", _channel.index, i);
+				remove("btnReverb", _channel.index, i);
 				
 				//set index to new place
 				_channel.index = i;				
@@ -326,7 +316,7 @@ function channelObj(chName, chVolume, chPan, chIndex){
 			let volumeDisplay = document.getElementById(channel.index + "VolDisplay");
 			
 			//have bool for mute or not (not mute by default) if(bool) then either muted or un mute have vol still be original vol but make channel mute
-			if(channel.muted == false){
+			if(channel.muted === false){
 				channel.muted = true;
 				volumeDisplay.innerHTML = "Muted";
 				
@@ -380,7 +370,7 @@ function channelObj(chName, chVolume, chPan, chIndex){
 		channelDiv.addEventListener("dblclick", function(){	
 			let effectsDiv = document.getElementById(channel.index + "EffectsDiv");
 			
-			if (channel.effectsShowing == false){
+			if (channel.effectsShowing === false){
 				channel.effectsShowing = true;
 				effectsDiv.style.display = "block";			
 			}	else {		
@@ -396,10 +386,10 @@ function channelObj(chName, chVolume, chPan, chIndex){
 	//add notes to the array
 	this.changeNote = function(stepIndex, note){
 		channel.noteArray[stepIndex] = note;
-		
+
 		channel.sequence.dispose();
-		
-		if (playing == true){
+
+		if (playing === true){
 			Tone.Transport.stop();
 		}	
 		
@@ -408,17 +398,18 @@ function channelObj(chName, chVolume, chPan, chIndex){
 		}, channel.noteArray, "8n");		
 		channel.sequence.start();
 		
-		if (playing == true){
+		if (playing === true){
 			Tone.Transport.start();
 		}
 	};
 	
 	//funtion to connect or disconnect the node, returns the new state of whether its connected or not
 	this.addRemoveNode = function(node, nodeIndex, isConnected){
-	
-		if(isConnected == false){
+        var pre;
+
+		if(isConnected === false){
 			//get final node in array (array.length is node new position before it gets pushed)
-			var pre = channel.nodeArray[channel.nodeArray.length - 1];	
+			pre = channel.nodeArray[channel.nodeArray.length - 1];	
 						
 			//separate end node from master
 			pre.disconnect(Tone.Master);
@@ -429,17 +420,16 @@ function channelObj(chName, chVolume, chPan, chIndex){
 			//connect new node to master
 			node.toMaster();
 			
-			var nodeIndex = channel.nodeArray.length;
+			nodeIndex = channel.nodeArray.length;
 			//add new node to array
 			channel.nodeArray.push(node);
 			
 			return nodeIndex;
 		} else {		
-			
-			var pre = channel.nodeArray[(nodeIndex - 1)];
+			pre = channel.nodeArray[(nodeIndex - 1)];
 			var post;
 			
-			if (nodeIndex == channel.nodeArray.length - 1){
+			if (nodeIndex === channel.nodeArray.length - 1){
 				post = Tone.Master;
 			} else {
 				post = channel.nodeArray[nodeIndex + 1];
@@ -474,7 +464,7 @@ function stepObj(channel, stepNo){
 		var stepButton = document.getElementById(step.channelIndex + "step" + step.index);
 		
 		stepButton.addEventListener("click",function(){
-			if (step.active == false){
+			if (step.active === false){
 				stepButton.src = "resources/padOn.png";
 				step.active = true;
 				step.value = "c4";
@@ -499,7 +489,10 @@ function effectsObj(channel){
 	
 	//reverb
 	this.reverb = new reverbObj(channel);
-	effects.effectsArray.push(effects.reverb);
+    effects.effectsArray.push(effects.reverb);
+    //delay
+    this.delay = new reverbObj(channel);
+    //effects.effectsArray.push(effects.delay);
 	
 	//starts all event listeners for each effect
 	this.startEventListeners = function(){
@@ -507,12 +500,12 @@ function effectsObj(channel){
 			var effect = effects.effectsArray[i];
 			for(i = 0; i < effect.listenerArray.length; i++){
 				effect.listenerArray[i]();
-				console.log(i);
 			}
 		}
 	}
 }
 
+//reverb object
 function reverbObj(channel){
 	//reverb node
 	var my = this;
@@ -521,71 +514,83 @@ function reverbObj(channel){
 	this.reverbDampening = 3000;
 	this.reverbIndex;
 	this.reverb = new Tone.Freeverb(my.reverbRoomSize, my.reverbDampening);
-	
-	var arr = [];
-	this.listenerArray = arr;
+    this.name = "Reverb";
+
+    var arr1 = [];
+    this.parameterArray = arr1;
+
+	var arr2 = [];
+	this.listenerArray = arr2;
 	
 	//event listener for reverb slider
-	this.sliderReverbRoomSize_EventHandler = function(){
-		let reverbRoomSizeSlider = document.getElementById(channel.index + "ReverbRoomSizeSlider");
-		
-		reverbRoomSizeSlider.addEventListener("input", function(){
-			//get slider value and set variable
-			my.reverbRoomSize = reverbRoomSizeSlider.value / 100;
-			
-			//change reverb display text		
-			let reverbRoomSizeDisplay = document.getElementById(channel.index + "ReverbRoomSizeDisplay");
-			reverbRoomSizeDisplay.innerHTML = my.reverbRoomSize;
-			
-			if (my.reverbConnected == true){
-				my.reverb.roomSize.value = my.reverbRoomSize;
-			}
-		});
-	}
-	my.listenerArray.push(my.sliderReverbRoomSize_EventHandler);
-	
+    this.sliderReverbRoomSize_EventHandler = function () {
+        let reverbRoomSizeSlider = document.getElementById(channel.index + "ReverbRoomSizeSlider");
+
+        reverbRoomSizeSlider.addEventListener("input", function () {
+            //get slider value and set variable
+            my.reverbRoomSize = reverbRoomSizeSlider.value / 100;
+
+            //change reverb display text		
+            let reverbRoomSizeDisplay = document.getElementById(channel.index + "ReverbRoomSizeDisplay");
+            reverbRoomSizeDisplay.innerHTML = my.reverbRoomSize;
+
+            if (my.reverbConnected === true) {
+                my.reverb.roomSize.value = my.reverbRoomSize;
+            }
+        });
+    };
+    my.listenerArray.push(my.sliderReverbRoomSize_EventHandler);
+    var roomSizeInfo = new parameterValueObj("Room Size", "ReverbRoomSize", 0, 100, my.reverbRoomSize, my.reverbRoomSize * 100);
+    my.parameterArray.push(roomSizeInfo);
+
 	//event listener for reverb dampening
-	this.sliderReverbDampening_EventHandler = function(){
-		let reverbDampeningSlider = document.getElementById(channel.index + "ReverbDampeningSlider");
-		
-		reverbDampeningSlider.addEventListener("input", function(){
-			//get slider value and set variable
-			my.reverbDampening = Math.pow(reverbDampeningSlider.value, 2);
-			
-			//change display text
-			let reverbDampeningDisplay = document.getElementById(channel.index + "ReverbDampeningDisplay");
-			reverbDampeningDisplay.innerHTML = my.reverbDampening;
-			
-			if (my.reverbConnected == true){
-				my.reverb.dampening.value = my.reverbDampening;
-			}
-		});
-	}
+    this.sliderReverbDampening_EventHandler = function () {
+        let reverbDampeningSlider = document.getElementById(channel.index + "ReverbDampeningSlider");
+
+        reverbDampeningSlider.addEventListener("input", function () {
+            //get slider value and set variable
+            my.reverbDampening = Math.pow(reverbDampeningSlider.value, 2);
+
+            //change display text
+            let reverbDampeningDisplay = document.getElementById(channel.index + "ReverbDampeningDisplay");
+            reverbDampeningDisplay.innerHTML = my.reverbDampening;
+
+            if (my.reverbConnected === true) {
+                my.reverb.dampening.value = my.reverbDampening;
+            }
+        });
+    };
 	my.listenerArray.push(my.sliderReverbDampening_EventHandler);
-	
+    var dampeningInfo = new parameterValueObj("Dampening", "ReverbDampening", 0, 100, my.reverbDampening, Math.sqrt(my.reverbDampening));
+    my.parameterArray.push(dampeningInfo);
+
 	//event listener for cconnect/disconnect button
-	this.btnReverbConnect_EventHandler = function(){
-		let btnReverbConnect = document.getElementById(channel.index + "btnReverbConnect");
-		btnReverbConnect.addEventListener("click", function(){
-			
-			//checks whether connected or not then connects or disconnects. returns whether node is now connected
-			my.reverbIndex = channel.addRemoveNode(my.reverb, my.reverbIndex, my.reverbConnected);
-			
-			//change button text 
-			if (my.reverbConnected == false){
-				btnReverbConnect.value = "Disconnect";
-				my.reverbConnected = true;
-			}	else {
-				btnReverbConnect.value = "Connect";
-				my.reverbConnected = false;
-			}
-		});
-	}
-	my.listenerArray.push(my.btnReverbConnect_EventHandler);
+    this.btnReverb_EventHandler = function () {
+        let btnReverbConnect = document.getElementById(channel.index + "btnReverb");
+        btnReverbConnect.addEventListener("click", function () {
+
+            //checks whether connected or not then connects or disconnects. returns whether node is now connected
+            my.reverbIndex = channel.addRemoveNode(my.reverb, my.reverbIndex, my.reverbConnected);
+
+            //change button text 
+            if (my.reverbConnected === false) {
+                btnReverbConnect.value = "Disconnect";
+                my.reverbConnected = true;
+            } else {
+                btnReverbConnect.value = "Connect";
+                my.reverbConnected = false;
+            }
+        });
+    };
+    my.listenerArray.push(my.btnReverb_EventHandler);
+
 }
-	
-//TODO IN EFFECTS DIV
-//need to create function that draws effects into effects div recursively otherwise draw channel is going to be longer than olly wright
+
+//delay object
+function delayObj(channel){
+    var my = this;
+
+}
 
 //add channel to channel list and draw it
 function addChannel(){
@@ -593,12 +598,12 @@ function addChannel(){
 	let tbx = document.getElementById('newChannelName');
 	let newChannelName = tbx.value;
 	tbx.value = "";
-	 
+
 	//creating new channel object and adding to array
 	let channelIndex = mixingDeskArray.length;
 
 	//validation (object doesnt like not having a name :( )
-	if(newChannelName.length == 0){
+	if(newChannelName.length === 0){
 		let channelNo = channelIndex + 1;
 		newChannelName = "ch: " + channelNo;
 	}
@@ -606,7 +611,7 @@ function addChannel(){
 	let newChannel = new channelObj(newChannelName, 0.0, 0.0, channelIndex);
 	mixingDeskArray.push(newChannel);
 	drawChannel(newChannel);
-	drawSequencer(newChannel, true);
+	drawSequencer(newChannel);
 	drawEffects(newChannel);
 	
 	//need to call these after draw as the html elements dont exist yet 
@@ -628,6 +633,14 @@ function remove(string, oldIndex, newIndex){
 	document.getElementById(oldIndex + string).id = newIndex + string;
 }
 
+function parameterValueObj(Name, idName, min, max, defaultValue, sliderValue) {
+    this.name = Name;
+    this.idName = idName;
+    this.min = min;
+    this.max = max;
+    this.defaultValue = defaultValue;
+    this.sliderValue = sliderValue;
+}
 
 //misc event handlers
 
@@ -641,11 +654,11 @@ masterVolSlider.addEventListener("input", function(){
 
 //spacebar press plays and pauses
 document.body.onkeyup = function(e){
-    if(e.keyCode == 32){
-        if (playing == false){
-        	play();
+    if (e.keyCode === 32) {
+        if (playing === false){
+        play();
         } else {
-        	pause();
+        pause();
         }
     }
 }
