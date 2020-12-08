@@ -297,13 +297,21 @@ function channelObj(chName, chVolume, chPan, chIndex){
 				}
 				
 				//change effects containers ids
-				remove("EffectsDiv", _channel.index, i);
-				remove("ReverbRoomSizeSlider", _channel.index, i);
-				remove("ReverbRoomSizeDisplay", _channel.index, i);
-				remove("ReverbDampeningSlider", _channel.index, i);
-				remove("ReverbDampeningDisplay", _channel.index, i);
-				remove("btnReverb", _channel.index, i);
-				
+                remove("EffectsDiv", _channel.index, i);
+                var effectsArray = channel.effects.effectsArray;
+                //for every effect in effects array
+                for (a = 0; a < effectsArray.length; a++) {
+                    var effect = effectsArray[a];
+                    var parameterArray = effect.parameterArray;
+                    //for every parameter of effect
+                    for (b = 0; b < parameterArray.length; b++) {
+                        var parameter = parameterArray[b];
+                        remove(parameter.idName + "Slider", _channel.index, i);
+                        remove(parameter.idName + "Display", _channel.index, i);
+                    }
+                    //shift connect button
+                    remove("btn" + effect.name, _channel.index, i);
+                }
 				//set index to new place
 				_channel.index = i;				
 			}			
@@ -434,7 +442,9 @@ function channelObj(chName, chVolume, chPan, chIndex){
 			} else {
 				post = channel.nodeArray[nodeIndex + 1];
 			}
-			
+
+            console.log(pre);
+
 			//separate from pre and post
 			pre.disconnect(node);
 			node.disconnect(post);
@@ -499,7 +509,8 @@ function effectsObj(channel){
 		for(i = 0; i < effects.effectsArray.length; i++){
 			var effect = effects.effectsArray[i];
 			for(i = 0; i < effect.listenerArray.length; i++){
-				effect.listenerArray[i]();
+                var listener = effect.listenerArray[i];
+                listener.start();
 			}
 		}
 	}
@@ -509,11 +520,11 @@ function effectsObj(channel){
 function reverbObj(channel){
 	//reverb node
 	var my = this;
-	this.reverbConnected = false;
+	this.Connected = false;
 	this.reverbRoomSize = 0.3;
 	this.reverbDampening = 3000;
-	this.reverbIndex;
-	this.reverb = new Tone.Freeverb(my.reverbRoomSize, my.reverbDampening);
+	this.Index;
+	this.node = new Tone.Freeverb(my.reverbRoomSize, my.reverbDampening);
     this.name = "Reverb";
 
     var arr1 = [];
@@ -521,67 +532,25 @@ function reverbObj(channel){
 
 	var arr2 = [];
 	this.listenerArray = arr2;
-	
-	//event listener for reverb slider
-    this.sliderReverbRoomSize_EventHandler = function () {
-        let reverbRoomSizeSlider = document.getElementById(channel.index + "ReverbRoomSizeSlider");
 
-        reverbRoomSizeSlider.addEventListener("input", function () {
-            //get slider value and set variable
-            my.reverbRoomSize = reverbRoomSizeSlider.value / 100;
-
-            //change reverb display text		
-            let reverbRoomSizeDisplay = document.getElementById(channel.index + "ReverbRoomSizeDisplay");
-            reverbRoomSizeDisplay.innerHTML = my.reverbRoomSize;
-
-            if (my.reverbConnected === true) {
-                my.reverb.roomSize.value = my.reverbRoomSize;
-            }
-        });
-    };
-    my.listenerArray.push(my.sliderReverbRoomSize_EventHandler);
-    var roomSizeInfo = new parameterValueObj("Room Size", "ReverbRoomSize", 0, 100, my.reverbRoomSize, my.reverbRoomSize * 100);
+    //room size
+    //set and send default parameter data to parameter array
+    var roomSizeInfo = new parameterValueObj("Room Size", "ReverbRoomSize", 0, 100, my.reverbRoomSize, 100);
     my.parameterArray.push(roomSizeInfo);
+	//event listener for room size
+    this.sliderReverbRoomSize_EventHandler = new sliderListener(roomSizeInfo, my.node.roomSize, channel);
+    my.listenerArray.push(my.sliderReverbRoomSize_EventHandler);
 
-	//event listener for reverb dampening
-    this.sliderReverbDampening_EventHandler = function () {
-        let reverbDampeningSlider = document.getElementById(channel.index + "ReverbDampeningSlider");
-
-        reverbDampeningSlider.addEventListener("input", function () {
-            //get slider value and set variable
-            my.reverbDampening = Math.pow(reverbDampeningSlider.value, 2);
-
-            //change display text
-            let reverbDampeningDisplay = document.getElementById(channel.index + "ReverbDampeningDisplay");
-            reverbDampeningDisplay.innerHTML = my.reverbDampening;
-
-            if (my.reverbConnected === true) {
-                my.reverb.dampening.value = my.reverbDampening;
-            }
-        });
-    };
-	my.listenerArray.push(my.sliderReverbDampening_EventHandler);
-    var dampeningInfo = new parameterValueObj("Dampening", "ReverbDampening", 0, 100, my.reverbDampening, Math.sqrt(my.reverbDampening));
+    //dampening
+    //set and send default parameter data to parameter array
+    var dampeningInfo = new parameterValueObj("Dampening", "ReverbDampening", 0, 100, my.reverbDampening, 1 / Math.sqrt(my.reverbDampening));
     my.parameterArray.push(dampeningInfo);
-
+	//event listener for reverb dampening
+    this.sliderReverbDampening_EventHandler = new sliderListener(dampeningInfo, my.node.dampening, channel);
+    my.listenerArray.push(my.sliderReverbDampening_EventHandler);
+    
 	//event listener for cconnect/disconnect button
-    this.btnReverb_EventHandler = function () {
-        let btnReverbConnect = document.getElementById(channel.index + "btnReverb");
-        btnReverbConnect.addEventListener("click", function () {
-
-            //checks whether connected or not then connects or disconnects. returns whether node is now connected
-            my.reverbIndex = channel.addRemoveNode(my.reverb, my.reverbIndex, my.reverbConnected);
-
-            //change button text 
-            if (my.reverbConnected === false) {
-                btnReverbConnect.value = "Disconnect";
-                my.reverbConnected = true;
-            } else {
-                btnReverbConnect.value = "Connect";
-                my.reverbConnected = false;
-            }
-        });
-    };
+    this.btnReverb_EventHandler = new effectButtonListener(my, channel);
     my.listenerArray.push(my.btnReverb_EventHandler);
 
 }
@@ -589,7 +558,57 @@ function reverbObj(channel){
 //delay object
 function delayObj(channel){
     var my = this;
+    this.connected = false;
+    this.index;
+    this.delayTime = 0.1
+    this.delay = new Tone.Delay(my.delayTime);
+    this.name = "Delay";
 
+    var arr1 = [];
+    this.parameterArray = arr1;
+
+    var arr2 = [];
+    this.listenerArray = arr2;
+
+    //set and send default parameter data to parameter array
+    var delayTimeInfo = new parameterValueObj("Delay Time", "DelayTime", 0, 100, my.delayTime, 10);
+    my.parameterArray.push(delayTimeInfo);
+    //listener for delay time
+    this.delayTimeSlider_EventHandler = function () {
+        var slider = document.getElementById(delayTimeInfo.idName + "Sider");
+        slider.addEventListener("input", function () {
+            var val = slider.value;
+
+            delayTimeInfo.value = val / delayTimeInfo.multiplier;
+
+            var display = document.getElementById(delayTimeInfo.idName + "Display")
+            display.innerHTML = delayTimeInfo.value;
+
+            //dont need the if statement because it should change even when not connected
+            my.reverb.DelayTime.value = delayTimeInfo.value;
+        });
+    };
+    my.listenerArray.push(my.delayTimeSlider_EventHandler);
+
+    //connect/disconect button
+    this.btnDelay_EventHandler = function () {
+        var button = document.getElementById("btn" + my.name);
+        button.addEventListener("click", function () {
+
+            //checks whether connected or not then connects or disconnects. returns whether node is now connected
+            my.index = addRemoveNode(my.delay, my.index, my.connected);
+
+            //change button text and change bool
+            if (my.connected === false) {
+                button.value = "Disconnect";
+                my.connected = true;
+            } else {
+                button.value = "Connect";
+                my.connected = false;
+            }
+        });
+    };
+    my.listenerArray.push(my.btnDelay_EventHandler);
 }
 
 //add channel to channel list and draw it
@@ -633,18 +652,58 @@ function remove(string, oldIndex, newIndex){
 	document.getElementById(oldIndex + string).id = newIndex + string;
 }
 
-function parameterValueObj(Name, idName, min, max, defaultValue, sliderValue) {
+function parameterValueObj(Name, idName, min, max, defaultValue, multiplier) {
+    my = this;
     this.name = Name;
     this.idName = idName;
     this.min = min;
     this.max = max;
     this.defaultValue = defaultValue;
-    this.sliderValue = sliderValue;
+    this.value = defaultValue
+    this.multiplier = multiplier;
+    this.sliderValue = my.defaultValue * my.multiplier;
+}
+
+function sliderListener(parameterObj, nodeParameter, channel) {
+
+    this.start = function () {
+        var slider = document.getElementById(channel.index + parameterObj.idName + "Slider");
+        slider.addEventListener("input", function () {
+            var val = slider.value;
+
+            parameterObj.value = val / parameterObj.multiplier;
+
+            var display = document.getElementById(channel.index + parameterObj.idName + "Display");
+            display.innerHTML = parameterObj.value;
+
+            nodeParameter.value = parameterObj.value;
+        });
+    };
+}
+
+function effectButtonListener(effect, channel) {
+
+    this.start = function () {
+        var button = document.getElementById(channel.index + "btn" + effect.name);
+        button.addEventListener("click", function () {
+            effect.index = channel.addRemoveNode(effect.node, effect.index, effect.connected);
+
+            //change button text 
+            if (effect.connected === false) {
+                button.value = "Disconnect";
+                effect.connected = true;
+            } else {
+                button.value = "Connect";
+                effect.connected = false;
+            }
+        });
+    };
 }
 
 //misc event handlers
 
 //master volume change
+
 masterVolSlider.addEventListener("input", function(){
 	var masterVol = masterVolSlider.value;
 	masterVolDisplay.innerHTML = masterVol;
