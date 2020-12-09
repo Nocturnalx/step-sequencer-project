@@ -443,8 +443,6 @@ function channelObj(chName, chVolume, chPan, chIndex){
 				post = channel.nodeArray[nodeIndex + 1];
 			}
 
-            console.log(pre);
-
 			//separate from pre and post
 			pre.disconnect(node);
 			node.disconnect(post);
@@ -520,7 +518,7 @@ function effectsObj(channel){
 function reverbObj(channel){
 	//reverb node
 	var my = this;
-	this.Connected = false;
+	this.connected = false;
 	this.reverbRoomSize = 0.3;
 	this.reverbDampening = 3000;
 	this.Index;
@@ -613,10 +611,7 @@ function delayObj(channel){
 
 //add channel to channel list and draw it
 function addChannel(){
-	//get and reset tbx
-	let tbx = document.getElementById('newChannelName');
-	let newChannelName = tbx.value;
-	tbx.value = "";
+	let newChannelName = prompt("New Channel Name");
 
 	//creating new channel object and adding to array
 	let channelIndex = mixingDeskArray.length;
@@ -685,7 +680,8 @@ function effectButtonListener(effect, channel) {
 
     this.start = function () {
         var button = document.getElementById(channel.index + "btn" + effect.name);
-        button.addEventListener("click", function () {
+		button.addEventListener("click", function () {
+
             effect.index = channel.addRemoveNode(effect.node, effect.index, effect.connected);
 
             //change button text 
@@ -713,7 +709,8 @@ masterVolSlider.addEventListener("input", function(){
 
 //spacebar press plays and pauses
 document.body.onkeyup = function(e){
-    if (e.keyCode === 32) {
+	if (e.keyCode === 32) {
+		e.preventDefault();
         if (playing === false){
         play();
         } else {
