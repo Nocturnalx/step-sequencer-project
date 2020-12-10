@@ -146,26 +146,31 @@ function drawSequencer(channel){
 }
 
 function drawEffects(channel){
-    var effectsDiv = document.getElementById(channel.index + 'EffectsDiv');
+    var container = document.getElementById(channel.index + 'EffectsDiv');
     var effectsArray = channel.effects.effectsArray;
 
     for (i = 0; i < effectsArray.length; i++) {
         var effect = effectsArray[i];
 
+        var effectDiv = document.createElement('div');
+        effectDiv.id = effect.name + "Div";
+        effectDiv.classList.add("effectDiv");
+        container.appendChild(effectDiv);
+
         //create label
         var effectLabel = document.createElement('p');
         effectLabel.innerHTML = effect.name;
-        effectsDiv.appendChild(effectLabel);
+        effectDiv.appendChild(effectLabel);
 
         //create label, slider and display for each parameter of effect
         var parameterArray = effect.parameterArray;
 
-        for (i = 0; i < parameterArray.length; i++) {
-            var parameter = parameterArray[i];
+        for (n = 0; n < parameterArray.length; n++) {
+            var parameter = parameterArray[n];
 
             var parameterLabel = document.createElement('p');
             parameterLabel.innerHTML = parameter.name;
-            effectsDiv.appendChild(parameterLabel);
+            effectDiv.appendChild(parameterLabel);
 
             var parameterSlider = document.createElement('input');
             parameterSlider.type = "range";
@@ -173,12 +178,12 @@ function drawEffects(channel){
             parameterSlider.max = parameter.max;
             parameterSlider.value = parameter.sliderValue;
             parameterSlider.id = channel.index + parameter.idName + "Slider";
-            effectsDiv.appendChild(parameterSlider);
+            effectDiv.appendChild(parameterSlider);
 
             var parameterDisplay = document.createElement('p');
             parameterDisplay.innerHTML = parameter.defaultValue;
             parameterDisplay.id = channel.index + parameter.idName + "Display";
-            effectsDiv.appendChild(parameterDisplay);
+            effectDiv.appendChild(parameterDisplay);
         }
 
         //create button
@@ -187,7 +192,7 @@ function drawEffects(channel){
         effectButton.value = "connect";
         effectButton.id = channel.index + "btn" + effect.name;
         effectButton.classList.add("button");
-        effectsDiv.appendChild(effectButton);
+        effectDiv.appendChild(effectButton);
     }
 }
 
@@ -199,7 +204,7 @@ function channelObj(chName, chVolume, chPan, chIndex){
 	this.index = chIndex;
 	this.muted = false;
 	this.effectsShowing = false;
-	var nodeArr = [];
+	var nodeArr = []; //node array is an array of objects that contain the tone nodes as .node
 	this.nodeArray = nodeArr;
 	var channel = this;
 
@@ -211,23 +216,22 @@ function channelObj(chName, chVolume, chPan, chIndex){
 	//SYNTH AND SEQUENCE
 	
 	//create synth node, add to array
-	this.synth = new Tone.MembraneSynth();
-	channel.synth.volume.value = channel.volume;
+    this.synth = new synth(channel);
 	channel.nodeArray.push(channel.synth);
 	
 	//create pan node, add to array
-	this.panNode = new Tone.PanVol(0,0);
+	this.panNode = new pan(channel);
 	channel.nodeArray.push(channel.panNode);
 	
 	//connect synth to pan
-	channel.synth.connect(channel.panNode);
+	channel.synth.node.connect(channel.panNode.node);
 	
 	//apply final node in array to master
-	channel.nodeArray[channel.nodeArray.length - 1].toMaster();
+	channel.nodeArray[channel.nodeArray.length - 1].node.toMaster();
 	
 	//create sequence for synth from array
 	this.sequence = new Tone.Sequence(function(time, note) {
-		channel.synth.triggerAttackRelease(note,"8n");
+		channel.synth.node.triggerAttackRelease(note,"8n");
 	}, channel.noteArray, "8n");	
 	channel.sequence.start();
 
@@ -402,7 +406,7 @@ function channelObj(chName, chVolume, chPan, chIndex){
 		}	
 		
 		channel.sequence = new Tone.Sequence(function(time, note) {
-			channel.synth.triggerAttackRelease(note,"8n");
+			channel.synth.node.triggerAttackRelease(note,"8n");
 		}, channel.noteArray, "8n");		
 		channel.sequence.start();
 		
@@ -412,13 +416,19 @@ function channelObj(chName, chVolume, chPan, chIndex){
 	};
 	
 	//funtion to connect or disconnect the node, returns the new state of whether its connected or not
-	this.addRemoveNode = function(node, nodeIndex, isConnected){
+	this.addRemoveNode = function(effect){
         var pre;
+
+        var node = effect.node;
+        var nodeIndex = effect.index;
+        var isConnected = effect.connected;
 
 		if(isConnected === false){
 			//get final node in array (array.length is node new position before it gets pushed)
-			pre = channel.nodeArray[channel.nodeArray.length - 1];	
-						
+			preObj = channel.nodeArray[channel.nodeArray.length - 1];	
+
+            pre = preObj.node;
+
 			//separate end node from master
 			pre.disconnect(Tone.Master);
 			
@@ -430,17 +440,22 @@ function channelObj(chName, chVolume, chPan, chIndex){
 			
 			nodeIndex = channel.nodeArray.length;
 			//add new node to array
-			channel.nodeArray.push(node);
+			channel.nodeArray.push(effect);
 			
 			return nodeIndex;
 		} else {		
-			pre = channel.nodeArray[(nodeIndex - 1)];
+            preObj = channel.nodeArray[(nodeIndex - 1)];
+            pre = preObj.node;
+
 			var post;
 			
 			if (nodeIndex === channel.nodeArray.length - 1){
-				post = Tone.Master;
+                post = Tone.Master;
+                
 			} else {
-				post = channel.nodeArray[nodeIndex + 1];
+                var postObj = channel.nodeArray[nodeIndex + 1];
+                post = postObj.node;
+                postObj.index = postObj.index - 1;
 			}
 
 			//separate from pre and post
@@ -499,15 +514,18 @@ function effectsObj(channel){
 	this.reverb = new reverbObj(channel);
     effects.effectsArray.push(effects.reverb);
     //delay
-    this.delay = new reverbObj(channel);
-    //effects.effectsArray.push(effects.delay);
+    this.delay = new delayObj(channel);
+    effects.effectsArray.push(effects.delay);
+    //chorus
+    this.AutoPanner = new autoPannerObj(channel);
+    effects.effectsArray.push(effects.AutoPanner);
 	
 	//starts all event listeners for each effect
 	this.startEventListeners = function(){
 		for(i = 0; i < effects.effectsArray.length; i++){
-			var effect = effects.effectsArray[i];
-			for(i = 0; i < effect.listenerArray.length; i++){
-                var listener = effect.listenerArray[i];
+            var effect = effects.effectsArray[i];
+			for(n = 0; n < effect.listenerArray.length; n++){
+                var listener = effect.listenerArray[n];
                 listener.start();
 			}
 		}
@@ -533,7 +551,7 @@ function reverbObj(channel){
 
     //room size
     //set and send default parameter data to parameter array
-    var roomSizeInfo = new parameterValueObj("Room Size", "ReverbRoomSize", 0, 100, my.reverbRoomSize, 100);
+    var roomSizeInfo = new parameterInfoObj("Room Size", "ReverbRoomSize", 0, 100, my.reverbRoomSize, 100);
     my.parameterArray.push(roomSizeInfo);
 	//event listener for room size
     this.sliderReverbRoomSize_EventHandler = new sliderListener(roomSizeInfo, my.node.roomSize, channel);
@@ -541,7 +559,7 @@ function reverbObj(channel){
 
     //dampening
     //set and send default parameter data to parameter array
-    var dampeningInfo = new parameterValueObj("Dampening", "ReverbDampening", 0, 100, my.reverbDampening, 1 / Math.sqrt(my.reverbDampening));
+    var dampeningInfo = new parameterInfoObj("Dampening", "ReverbDampening", 0, 5000, my.reverbDampening, 1);
     my.parameterArray.push(dampeningInfo);
 	//event listener for reverb dampening
     this.sliderReverbDampening_EventHandler = new sliderListener(dampeningInfo, my.node.dampening, channel);
@@ -558,8 +576,9 @@ function delayObj(channel){
     var my = this;
     this.connected = false;
     this.index;
-    this.delayTime = 0.1
-    this.delay = new Tone.Delay(my.delayTime);
+    this.delayTime = 0.1;
+    this.feedback = 0.5;
+    this.node = new Tone.FeedbackDelay(my.delayTime, my.feedback);
     this.name = "Delay";
 
     var arr1 = [];
@@ -568,86 +587,68 @@ function delayObj(channel){
     var arr2 = [];
     this.listenerArray = arr2;
 
+    //delay time
     //set and send default parameter data to parameter array
-    var delayTimeInfo = new parameterValueObj("Delay Time", "DelayTime", 0, 100, my.delayTime, 10);
+    var delayTimeInfo = new parameterInfoObj("Delay Time", "DelayDelayTime", 0, 100, my.delayTime, 100);
     my.parameterArray.push(delayTimeInfo);
     //listener for delay time
-    this.delayTimeSlider_EventHandler = function () {
-        var slider = document.getElementById(delayTimeInfo.idName + "Sider");
-        slider.addEventListener("input", function () {
-            var val = slider.value;
-
-            delayTimeInfo.value = val / delayTimeInfo.multiplier;
-
-            var display = document.getElementById(delayTimeInfo.idName + "Display")
-            display.innerHTML = delayTimeInfo.value;
-
-            //dont need the if statement because it should change even when not connected
-            my.reverb.DelayTime.value = delayTimeInfo.value;
-        });
-    };
+    this.delayTimeSlider_EventHandler = new sliderListener(delayTimeInfo, my.node.delayTime, channel);
     my.listenerArray.push(my.delayTimeSlider_EventHandler);
 
+    //feedback
+    var feedbackInfo = new parameterInfoObj("Feedback", "DelayFeedback", 0, 100, my.feedback, 100);
+    my.parameterArray.push(feedbackInfo);
+    this.delayFeedbackSlider_EventHandler = new sliderListener(feedbackInfo, my.node.feedback, channel);
+    my.listenerArray.push(my.delayFeedbackSlider_EventHandler);
+
     //connect/disconect button
-    this.btnDelay_EventHandler = function () {
-        var button = document.getElementById("btn" + my.name);
-        button.addEventListener("click", function () {
-
-            //checks whether connected or not then connects or disconnects. returns whether node is now connected
-            my.index = addRemoveNode(my.delay, my.index, my.connected);
-
-            //change button text and change bool
-            if (my.connected === false) {
-                button.value = "Disconnect";
-                my.connected = true;
-            } else {
-                button.value = "Connect";
-                my.connected = false;
-            }
-        });
-    };
+    this.btnDelay_EventHandler = new effectButtonListener(my, channel);
     my.listenerArray.push(my.btnDelay_EventHandler);
 }
 
-//add channel to channel list and draw it
-function addChannel(){
-	let newChannelName = prompt("New Channel Name");
+//auto panner
+function autoPannerObj(channel){
+    var my = this;
+    this.connected = false;
+    this.index;
+    this.name = "Auto Panner";
+    this.frequency = 300;
+    this.node = new Tone.AutoPanner(my.frequency);
 
-	//creating new channel object and adding to array
-	let channelIndex = mixingDeskArray.length;
+    var arr1 = [];
+    this.parameterArray = arr1;
 
-	//validation (object doesnt like not having a name :( )
-	if(newChannelName.length === 0){
-		let channelNo = channelIndex + 1;
-		newChannelName = "ch: " + channelNo;
-	}
+    var arr2 = [];
+    this.listenerArray = arr2;
 
-	let newChannel = new channelObj(newChannelName, 0.0, 0.0, channelIndex);
-	mixingDeskArray.push(newChannel);
-	drawChannel(newChannel);
-	drawSequencer(newChannel);
-	drawEffects(newChannel);
-	
-	//need to call these after draw as the html elements dont exist yet 
-	//change to newChannel.startEventListeners
-	newChannel.startEventListeners();
+    //frequency
+    var frequencyInfo = new parameterInfoObj("Frequency", "AutoPannerFrequency", 0, 5000, my.frequency, 1);
+    my.parameterArray.push(frequencyInfo);
+    this.autoPannerFrequencySlider_EventHandler = new sliderListener(frequencyInfo, my.node.frequency, channel);
+    my.listenerArray.push(my.autoPannerFrequencySlider_EventHandler);
+
+    //connect buitton
+    my.connectButton_EventHandler = new effectButtonListener(my, channel);
+    my.listenerArray.push(my.connectButton_EventHandler);
 }
 
-function play(){
-	Tone.Transport.start();
-	playing = true;
+//synth obj
+function synth(channel) {
+    my = this;
+    this.index;
+    this.node = new Tone.AMSynth();
+    my.node.volume.value = channel.volume;
 }
 
-function pause(){
-	Tone.Transport.stop();
-	playing = false;
+//pan controller obj
+function pan(channel) {
+    my = this;
+    this.index;
+    this.node = new Tone.PanVol(0, 0);
 }
 
-function remove(string, oldIndex, newIndex){
-	document.getElementById(oldIndex + string).id = newIndex + string;
-}
-
-function parameterValueObj(Name, idName, min, max, defaultValue, multiplier) {
+//object containing parameter info names vlaues ect
+function parameterInfoObj(Name, idName, min, max, defaultValue, divider) {
     my = this;
     this.name = Name;
     this.idName = idName;
@@ -655,10 +656,11 @@ function parameterValueObj(Name, idName, min, max, defaultValue, multiplier) {
     this.max = max;
     this.defaultValue = defaultValue;
     this.value = defaultValue
-    this.multiplier = multiplier;
-    this.sliderValue = my.defaultValue * my.multiplier;
+    this.divider = divider;
+    this.sliderValue = my.defaultValue * my.divider;
 }
 
+//object containing method for initiating slider listeners
 function sliderListener(parameterObj, nodeParameter, channel) {
 
     this.start = function () {
@@ -666,7 +668,7 @@ function sliderListener(parameterObj, nodeParameter, channel) {
         slider.addEventListener("input", function () {
             var val = slider.value;
 
-            parameterObj.value = val / parameterObj.multiplier;
+            parameterObj.value = val / parameterObj.divider;
 
             var display = document.getElementById(channel.index + parameterObj.idName + "Display");
             display.innerHTML = parameterObj.value;
@@ -676,13 +678,14 @@ function sliderListener(parameterObj, nodeParameter, channel) {
     };
 }
 
+//object containing method for initiating effect connect button listener
 function effectButtonListener(effect, channel) {
 
     this.start = function () {
         var button = document.getElementById(channel.index + "btn" + effect.name);
 		button.addEventListener("click", function () {
 
-            effect.index = channel.addRemoveNode(effect.node, effect.index, effect.connected);
+            effect.index = channel.addRemoveNode(effect);
 
             //change button text 
             if (effect.connected === false) {
@@ -696,6 +699,44 @@ function effectButtonListener(effect, channel) {
     };
 }
 
+
+//add channel to channel list and draw it
+function addChannel() {
+    let newChannelName = prompt("New Channel Name");
+
+    //creating new channel object and adding to array
+    let channelIndex = mixingDeskArray.length;
+
+    //validation (object doesnt like not having a name :( )
+    if (newChannelName.length === 0) {
+        let channelNo = channelIndex + 1;
+        newChannelName = "ch: " + channelNo;
+    }
+
+    let newChannel = new channelObj(newChannelName, 0.0, 0.0, channelIndex);
+    mixingDeskArray.push(newChannel);
+    drawChannel(newChannel);
+    drawSequencer(newChannel);
+    drawEffects(newChannel);
+
+    //need to call these after draw as the html elements dont exist yet 
+    //change to newChannel.startEventListeners
+    newChannel.startEventListeners();
+}
+
+function play() {
+    Tone.Transport.start();
+    playing = true;
+}
+
+function pause() {
+    Tone.Transport.stop();
+    playing = false;
+}
+
+function remove(string, oldIndex, newIndex) {
+    document.getElementById(oldIndex + string).id = newIndex + string;
+}
 //misc event handlers
 
 //master volume change

@@ -85,6 +85,10 @@ row{
 	margin-left: 10px;
 }
 
+.effectDiv{
+    padding-bottom: 20px;
+}
+
 .addChannelButton{
 	float: right;
 	padding-right: 20px;
