@@ -107,14 +107,18 @@ function drawChannel(channel){
 }
 
 //draws elements for sequencer in a channel
-function drawSequencer(channel){
-	//declare sequencer roll (parent)
-	var sequencerRoll = document.getElementById('sequencerRoll');
-	
+function drawSequencer(channel) {
+    //container
+    var sequencersContainer = document.getElementById('sequencersContainer');
+
+    var sequencerAndSynthDiv = document.createElement('div');
+    sequencersContainer.appendChild(sequencerAndSynthDiv);
+
 	var seqDiv = document.createElement('div');
-	seqDiv.classList.add("row");	
+    seqDiv.classList.add("row");
+    seqDiv.classList.add("seqDiv")
 	seqDiv.id = channel.index + "Seq";
-	sequencerRoll.appendChild(seqDiv);
+    sequencerAndSynthDiv.appendChild(seqDiv);
 	
 	//create p with channel name
 	var seqNameDiv = document.createElement('div');
@@ -142,7 +146,24 @@ function drawSequencer(channel){
 		seqDiv.appendChild(btnStep);
 		
 		step.click_EventHandler();
-	}
+    }
+
+    //synth information div
+    var synthInfoDiv = document.createElement('div');
+    synthInfoDiv.id = channel.index + "SynthInfoDiv";
+    synthInfoDiv.style.display = "none";
+    sequencerAndSynthDiv.appendChild(synthInfoDiv);
+
+    var synthDropDown = document.createElement('select');
+    synthDropDown.id = channel.index + "SynthDropDown";
+    synthInfoDiv.appendChild(synthDropDown);
+
+    for (i = 0; i < channel.synthArray.length; i++) {
+        var synth = channel.synthArray[i];
+        var option = document.createElement('option');
+        option.innerHTML = synth.name;
+        synthDropDown.appendChild(option);
+    }
 }
 
 function drawEffects(channel){
@@ -202,7 +223,8 @@ function channelObj(chName, chVolume, chPan, chIndex){
 	this.pan = chPan;
 	this.volume = chVolume;
 	this.index = chIndex;
-	this.muted = false;
+    this.muted = false;
+    this.synthInfoShowing = false;
 	this.effectsShowing = false;
 	var nodeArr = []; //node array is an array of objects that contain the tone nodes as .node
 	this.nodeArray = nodeArr;
@@ -212,26 +234,38 @@ function channelObj(chName, chVolume, chPan, chIndex){
 	this.stepArray = arr1;
     var arr2 = [null,null,null,null,null,null,null,null];
 	this.noteArray = arr2;
-	
+
+    var arr3 = [];
+    this.synthArray = arr3;
+
+    channel.synthArray.push(new synthObj(channel, 0,"Normal Synth", new Tone.Synth()));//0
+    channel.synthArray.push(new synthObj(channel, 1 , "AMSynth", new Tone.AMSynth()));
+    channel.synthArray.push(new synthObj(channel, 2, "duoSynth", new Tone.DuoSynth()));
+    channel.synthArray.push(new synthObj(channel, 3, "FMSynth", new Tone.FMSynth()));
+    channel.synthArray.push(new synthObj(channel, 4, "Membrane Synth", new Tone.MembraneSynth()));
+    channel.synthArray.push(new synthObj(channel, 5, "Pluck Synth", new Tone.PluckSynth()));
+    channel.synthArray.push(new synthObj(channel, 6, "Poly Synth", new Tone.PolySynth));//6
+    channel.synthArray.push(new sampler(channel, 7));//7
+
 	//SYNTH AND SEQUENCE
 	
 	//create synth node, add to array
-    this.synth = new synth(channel);
-	channel.nodeArray.push(channel.synth);
+    this.source = channel.synthArray[0];
+	channel.nodeArray.push(channel.source);
 	
 	//create pan node, add to array
 	this.panNode = new pan(channel);
 	channel.nodeArray.push(channel.panNode);
 	
 	//connect synth to pan
-	channel.synth.node.connect(channel.panNode.node);
+	channel.source.node.connect(channel.panNode.node);
 	
 	//apply final node in array to master
 	channel.nodeArray[channel.nodeArray.length - 1].node.toMaster();
 	
 	//create sequence for synth from array
 	this.sequence = new Tone.Sequence(function(time, note) {
-		channel.synth.node.triggerAttackRelease(note,"8n");
+		channel.source.node.triggerAttackRelease(note,"8n");
 	}, channel.noteArray, "8n");	
 	channel.sequence.start();
 
@@ -249,7 +283,7 @@ function channelObj(chName, chVolume, chPan, chIndex){
 			if(channel.muted === false){
 				let volumeDisplay = document.getElementById(channel.index + "VolDisplay");
 				volumeDisplay.innerHTML = channel.volume;
-				channel.synth.volume.value = channel.volume;
+				channel.source.node.volume.value = channel.volume;
 			}			
 		});
 		
@@ -264,8 +298,15 @@ function channelObj(chName, chVolume, chPan, chIndex){
 			var rollDiv = document.getElementById(channel.index + "Seq");
 			rollDiv.remove();
 			
-			channel.synth.dispose();
-			channel.effects.reverb.reverb.dispose();
+            channel.source.node.dispose();
+            channel.panNode.node.dispose();
+            var effectsArray = channel.effects.effectsArray;
+            for (i = 0; i > effectsArray.length; i++) {
+                var effectObj = effectsArray[i];
+                var effectNode = effectObj.node;
+
+                effectNode.dispose();
+            }
 			channel.sequence.stop();
 			channel.sequence.dispose();
 			
@@ -332,12 +373,12 @@ function channelObj(chName, chVolume, chPan, chIndex){
 				channel.muted = true;
 				volumeDisplay.innerHTML = "Muted";
 				
-				channel.synth.volume.value = -100;
+				channel.source.node.volume.value = -100;
 			} else{
 				channel.muted = false;
 				volumeDisplay.innerHTML = channel.volume;
 				
-				channel.synth.volume.value = channel.volume;
+				channel.source.node.volume.value = channel.volume;
 			}
 		});
 		
@@ -350,9 +391,7 @@ function channelObj(chName, chVolume, chPan, chIndex){
 			let panDisplay = document.getElementById(channel.index + "PanDisplay");
 			panDisplay.innerHTML = pan;
 			
-			//use pan.set 
-			
-			channel.panNode.pan.value = pan / 50;
+			channel.panNode.node.pan.value = pan / 50;
 			
 		});
 		
@@ -368,7 +407,7 @@ function channelObj(chName, chVolume, chPan, chIndex){
 			channel.name = newName;			
 		});
 		
-		seqNameTag.addEventListener("dblclick", function(){
+		seqNameTag.addEventListener("click", function(){
 			var newName = prompt("Enter channel name:");
 			chNameTag.innerHTML = newName;		
 			seqNameTag.innerHTML = newName;
@@ -378,7 +417,6 @@ function channelObj(chName, chVolume, chPan, chIndex){
 		
 		//show effects on div click
 		var channelDiv = document.getElementById(channel.index);
-		
 		channelDiv.addEventListener("dblclick", function(){	
 			let effectsDiv = document.getElementById(channel.index + "EffectsDiv");
 			
@@ -390,11 +428,41 @@ function channelObj(chName, chVolume, chPan, chIndex){
 				effectsDiv.style.display = "none";
 			}
 		});
-		
+
+        //show synth settings
+        var seqDiv = document.getElementById(channel.index + "Seq");
+        seqDiv.addEventListener("dblclick", function () {
+            var synthInfoDiv = document.getElementById(channel.index + "SynthInfoDiv");
+
+            if (channel.synthInfoShowing === false) { 
+                synthInfoDiv.style.display = "block";
+                channel.synthInfoShowing = true;
+            } else {
+                synthInfoDiv.style.display = "none";
+                channel.synthInfoShowing = false;
+            }
+        });
+
+        //change synth
+        var synthDropDown = document.getElementById(channel.index + "SynthDropDown");
+        synthDropDown.addEventListener("input", function () {
+            var newSynthName = synthDropDown.value;
+            var synth;
+            for (i = 0; i < channel.synthArray.length; i++) {
+                var test = channel.synthArray[i];
+                if (test.name == newSynthName) {
+                    synth = test;
+                    i = channel.synthArray.length;
+                }
+            }
+            channel.source.node.disconnect(channel.panNode.node);
+            synth.node.connect(channel.panNode.node);
+        });
+
 		//call effects event listeners
 		channel.effects.startEventListeners();
 	}
-	
+
 	//add notes to the array
 	this.changeNote = function(stepIndex, note){
 		channel.noteArray[stepIndex] = note;
@@ -406,7 +474,7 @@ function channelObj(chName, chVolume, chPan, chIndex){
 		}	
 		
 		channel.sequence = new Tone.Sequence(function(time, note) {
-			channel.synth.node.triggerAttackRelease(note,"8n");
+			channel.source.node.triggerAttackRelease(note,"8n");
 		}, channel.noteArray, "8n");		
 		channel.sequence.start();
 		
@@ -470,7 +538,8 @@ function channelObj(chName, chVolume, chPan, chIndex){
 			
 			return -1;
 		}
-	};
+    };
+
 }
 
 //instantiate new step object (individual steps for each channel)
@@ -632,11 +701,19 @@ function autoPannerObj(channel){
     my.listenerArray.push(my.connectButton_EventHandler);
 }
 
-//synth obj
-function synth(channel) {
-    my = this;
-    this.index;
-    this.node = new Tone.AMSynth();
+function synthObj(channel, index, name, node) {
+    var my = this;
+    this.index = index;
+    this.name = name;
+    this.node = node;
+    my.node.volume.value = channel.volume;
+}
+//sampler
+function sampler(channel, index) {
+    var my = this;
+    this.index = index;
+    this.name = "Sampler";
+    this.node = new Tone.Sampler();
     my.node.volume.value = channel.volume;
 }
 

@@ -74,11 +74,11 @@ row{
    margin-bottom: 5px;
 }
 
-.sequencerRoll{
+.sequencersContainer{
 	padding-top: 5;
 	display: block;
 	height: 400px;
-	width: 40% !important;
+	width: 96% !important;
 	overflow-y: auto;
 	background: #fffd;
 	border-radius: 20px;
@@ -107,16 +107,20 @@ row{
 	cursor: pointer;
 }
 
+.seqDiv{
+    cursor: pointer;
+}
+
 .sequencerNameDiv{
 	padding-left: 5px;
 	height: 100%;
-	width: 15%;
+	width: 10%;
 	overflow: hidden;
 	text-overflow: ellipsis;
 }
 
-.sequencerNameLabel{
-	display: inline;
+.seqNameLabel{
+    cursor: text;
 }
 
 .bottomBar{
