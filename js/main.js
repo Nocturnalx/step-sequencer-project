@@ -112,6 +112,7 @@ function drawSequencer(channel) {
     var sequencersContainer = document.getElementById('sequencersContainer');
 
     var sequencerAndSynthDiv = document.createElement('div');
+    sequencerAndSynthDiv.id = channel.index + "SeqAndSynthDiv";
     sequencersContainer.appendChild(sequencerAndSynthDiv);
 
 	var seqDiv = document.createElement('div');
@@ -154,16 +155,23 @@ function drawSequencer(channel) {
     synthInfoDiv.style.display = "none";
     sequencerAndSynthDiv.appendChild(synthInfoDiv);
 
+    //drop down
     var synthDropDown = document.createElement('select');
     synthDropDown.id = channel.index + "SynthDropDown";
     synthInfoDiv.appendChild(synthDropDown);
 
+    //create dropdown components from synth array
     for (i = 0; i < channel.synthArray.length; i++) {
         var synth = channel.synthArray[i];
         var option = document.createElement('option');
         option.innerHTML = synth.name;
         synthDropDown.appendChild(option);
     }
+
+    //call function that will show default synths options menu
+    channel.source.add();
+
+    //create sampler 
 }
 
 function drawEffects(channel){
@@ -238,13 +246,13 @@ function channelObj(chName, chVolume, chPan, chIndex){
     var arr3 = [];
     this.synthArray = arr3;
 
-    channel.synthArray.push(new synthObj(channel, 0,"Normal Synth", new Tone.Synth()));//0
-    channel.synthArray.push(new synthObj(channel, 1 , "AMSynth", new Tone.AMSynth()));
-    channel.synthArray.push(new synthObj(channel, 2, "duoSynth", new Tone.DuoSynth()));
-    channel.synthArray.push(new synthObj(channel, 3, "FMSynth", new Tone.FMSynth()));
-    channel.synthArray.push(new synthObj(channel, 4, "Membrane Synth", new Tone.MembraneSynth()));
-    channel.synthArray.push(new synthObj(channel, 5, "Pluck Synth", new Tone.PluckSynth()));
-    channel.synthArray.push(new synthObj(channel, 6, "Poly Synth", new Tone.PolySynth));//6
+    channel.synthArray.push(new synth(channel, 0));//0
+    channel.synthArray.push(new AMSynth(channel, 1));
+    channel.synthArray.push(new duoSynth(channel, 2));
+    channel.synthArray.push(new FMSynth(channel, 3));
+    channel.synthArray.push(new membraneSynth(channel, 4));
+    channel.synthArray.push(new pluckSynth(channel, 5));
+    channel.synthArray.push(new polySynth(channel, 6));
     channel.synthArray.push(new sampler(channel, 7));//7
 
 	//SYNTH AND SEQUENCE
@@ -295,8 +303,8 @@ function channelObj(chName, chVolume, chPan, chIndex){
 			var channelContainer = document.getElementById(channel.index + "Container");
 			channelContainer.remove();
 			
-			var rollDiv = document.getElementById(channel.index + "Seq");
-			rollDiv.remove();
+            var sequencerAndSynthDiv = document.getElementById(channel.index + "SeqAndSynthDiv");
+            sequencerAndSynthDiv.remove();
 			
             channel.source.node.dispose();
             channel.panNode.node.dispose();
@@ -333,9 +341,12 @@ function channelObj(chName, chVolume, chPan, chIndex){
 				remove("Remove", _channel.index, i);
 				
 				//change step containers ids
+                remove("SeqAndSynthDiv", _channel.index, i);
 				remove("Seq", _channel.index, i);
 				remove("SeqNameDiv", _channel.index, i);
-				remove("SeqNameLabel", _channel.index, i);
+                remove("SeqNameLabel", _channel.index, i);
+                remove("SynthInfoDiv", _channel.index, i);
+                remove("SynthDropDown", _channel.index, i);
 				
 				for(n = 0; n < 8; n++){
                     remove("step" + n, _channel.index, i);
@@ -446,7 +457,7 @@ function channelObj(chName, chVolume, chPan, chIndex){
         //change synth
         var synthDropDown = document.getElementById(channel.index + "SynthDropDown");
         synthDropDown.addEventListener("input", function () {
-            var newSynthName = synthDropDown.value;
+            var newSynthName = synthDropDown.options[synthDropDown.selectedIndex].text;
             var synth;
             for (i = 0; i < channel.synthArray.length; i++) {
                 var test = channel.synthArray[i];
@@ -456,8 +467,13 @@ function channelObj(chName, chVolume, chPan, chIndex){
                 }
             }
             channel.source.node.disconnect(channel.panNode.node);
+            channel.source.remove();
             synth.node.connect(channel.panNode.node);
+            synth.add();
+
+            channel.source = synth;
         });
+
 
 		//call effects event listeners
 		channel.effects.startEventListeners();
@@ -701,13 +717,162 @@ function autoPannerObj(channel){
     my.listenerArray.push(my.connectButton_EventHandler);
 }
 
-function synthObj(channel, index, name, node) {
+
+//synth objects
+function synth(channel, index) {
     var my = this;
     this.index = index;
-    this.name = name;
-    this.node = node;
+    this.name = "Normal Synth";
+    this.node = new Tone.Synth();
     my.node.volume.value = channel.volume;
+
+    this.testP;
+
+    this.add = function () {
+        var synthInfoDiv = document.getElementById(channel.index + "SynthInfoDiv");
+        var testP = document.createElement('p');
+        testP.innerHTML = my.name;
+        synthInfoDiv.appendChild(testP);
+        my.testP = testP;
+    };
+
+    this.remove = function () {
+        my.testP.remove();
+    };
 }
+
+function AMSynth(channel, index) {
+    var my = this;
+    this.index = index;
+    this.name = "AMSynth";
+    this.node = new Tone.AMSynth();
+    my.node.volume.value = channel.volume;
+
+    this.testP;
+
+    this.add = function () {
+        var synthInfoDiv = document.getElementById(channel.index + "SynthInfoDiv");
+        var testP = document.createElement('p');
+        testP.innerHTML = my.name;
+        synthInfoDiv.appendChild(testP);
+        my.testP = testP;
+    };
+
+    this.remove = function () {
+        my.testP.remove();
+    };
+}
+
+function duoSynth(channel, index) {
+    var my = this;
+    this.index = index;
+    this.name = "duoSynth";
+    this.node = new Tone.DuoSynth();
+    my.node.volume.value = channel.volume;
+
+    this.testP;
+
+    this.add = function () {
+        var synthInfoDiv = document.getElementById(channel.index + "SynthInfoDiv");
+        var testP = document.createElement('p');
+        testP.innerHTML = my.name;
+        synthInfoDiv.appendChild(testP);
+        my.testP = testP;
+    };
+
+    this.remove = function () {
+        my.testP.remove();
+    };
+}
+
+function FMSynth(channel, index) {
+    var my = this;
+    this.index = index;
+    this.name = "FMSynth";
+    this.node = new Tone.FMSynth();
+    my.node.volume.value = channel.volume;
+
+    this.testP;
+
+    this.add = function () {
+        var synthInfoDiv = document.getElementById(channel.index + "SynthInfoDiv");
+        var testP = document.createElement('p');
+        testP.innerHTML = my.name;
+        synthInfoDiv.appendChild(testP);
+        my.testP = testP;
+    };
+
+    this.remove = function () {
+        my.testP.remove();
+    };
+}
+
+function membraneSynth(channel, index) {
+    var my = this;
+    this.index = index;
+    this.name = "Membrane Synth";
+    this.node = new Tone.MembraneSynth();
+    my.node.volume.value = channel.volume;
+
+    this.testP;
+
+    this.add = function () {
+        var synthInfoDiv = document.getElementById(channel.index + "SynthInfoDiv");
+        var testP = document.createElement('p');
+        testP.innerHTML = my.name;
+        synthInfoDiv.appendChild(testP);
+        my.testP = testP;
+    };
+
+    this.remove = function () {
+        my.testP.remove();
+    };
+}
+
+function pluckSynth(channel, index) {
+    var my = this;
+    this.index = index;
+    this.name = "Pluck Synth";
+    this.node = new Tone.PluckSynth();
+    my.node.volume.value = channel.volume;
+
+    this.testP;
+
+    this.add = function () {
+        var synthInfoDiv = document.getElementById(channel.index + "SynthInfoDiv");
+        var testP = document.createElement('p');
+        testP.innerHTML = my.name;
+        synthInfoDiv.appendChild(testP);
+        my.testP = testP;
+    };
+
+    this.remove = function () {
+        my.testP.remove();
+    };
+}
+
+function polySynth(channel, index) {
+    var my = this;
+    this.index = index;
+    this.name = "Poly Synth";
+    this.node = new Tone.PolySynth();
+    my.node.volume.value = channel.volume;
+
+    this.testP;
+
+    this.add = function () {
+        var synthInfoDiv = document.getElementById(channel.index + "SynthInfoDiv");
+        var testP = document.createElement('p');
+        testP.innerHTML = my.name;
+        synthInfoDiv.appendChild(testP);
+        my.testP = testP;
+    };
+
+    this.remove = function () {
+        my.testP.remove();
+    };
+}
+
 //sampler
 function sampler(channel, index) {
     var my = this;
@@ -715,13 +880,36 @@ function sampler(channel, index) {
     this.name = "Sampler";
     this.node = new Tone.Sampler();
     my.node.volume.value = channel.volume;
+
+    this.sampleButton;
+
+    this.add = function () {
+        var synthInfoDiv = document.getElementById(channel.index + "SynthInfoDiv");
+        var sampleButton = document.createElement('input');
+        sampleButton.type = "button";
+        sampleButton.classList.add("button");
+        sampleButton.value = "Choose Sample";
+        synthInfoDiv.appendChild(sampleButton);
+        my.sampleButton = sampleButton;
+        my.btnChangeSample_EventHandler();
+    };
+
+    this.remove = function () {
+        my.sampleButton.remove();
+    };
+
+    this.btnChangeSample_EventHandler = function () {
+        my.sampleButton.addEventListener("click", function () {
+            console.log("input sample");
+        });
+    };
 }
 
 //pan controller obj
 function pan(channel) {
     my = this;
     this.index;
-    this.node = new Tone.PanVol(0, 0);
+    this.node = new Tone.PanVol(channel.pan, 0);
 }
 
 //object containing parameter info names vlaues ect
