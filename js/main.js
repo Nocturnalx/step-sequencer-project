@@ -225,6 +225,42 @@ function drawEffects(channel){
     }
 }
 
+function drawSynthInfoValues(channel) {
+    var synthInfoDiv = document.getElementById(channel.index + "SynthInfoDiv");
+
+    var sliderDiv = document.createElement('div');
+    sliderDiv.id = channel.index + "SliderDiv";
+    sliderDiv.classList.add("row");
+    synthInfoDiv.appendChild(sliderDiv);
+
+    var parameterArray = channel.source.parameterArray;
+
+    for (i = 0; i < parameterArray.length; i++) {
+        var parameter = parameterArray[i];
+
+        var parameterDiv = document.createElement('div');
+        parameterDiv.id = "parameterDiv";
+        sliderDiv.appendChild(parameterDiv);
+
+        var label = document.createElement('p');
+        label.innerHTML = parameter.name;
+        parameterDiv.appendChild(label);
+
+        var parameterSlider = document.createElement('input');
+        parameterSlider.type = "range";
+        parameterSlider.id = channel.index + parameter.idName + "Slider";
+        parameterSlider.min = parameter.min;
+        parameterSlider.max = parameter.max;
+        parameterSlider.value = parameter.sliderValue;
+        parameterDiv.appendChild(parameterSlider);
+
+        var display = document.createElement('p');
+        display.id = channel.index + parameter.idName + "Display";
+        display.innerHTML = parameter.defaultValue;
+        parameterDiv.appendChild(display);
+    }
+}
+
 //instantiate new channel object
 function channelObj(chName, chVolume, chPan, chIndex){
 	this.name = chName;
@@ -305,7 +341,7 @@ function channelObj(chName, chVolume, chPan, chIndex){
 			
             var sequencerAndSynthDiv = document.getElementById(channel.index + "SeqAndSynthDiv");
             sequencerAndSynthDiv.remove();
-			
+
             channel.source.node.dispose();
             channel.panNode.node.dispose();
             var effectsArray = channel.effects.effectsArray;
@@ -368,6 +404,10 @@ function channelObj(chName, chVolume, chPan, chIndex){
                     //shift connect button
                     remove("btn" + effect.name, _channel.index, i);
                 }
+
+                //for every parameter of synth
+
+
 				//set index to new place
 				_channel.index = i;				
 			}			
@@ -469,9 +509,8 @@ function channelObj(chName, chVolume, chPan, chIndex){
             channel.source.node.disconnect(channel.panNode.node);
             channel.source.remove();
             synth.node.connect(channel.panNode.node);
-            synth.add();
-
             channel.source = synth;
+            channel.source.add();            
         });
 
 
@@ -575,7 +614,7 @@ function stepObj(channel, stepNo){
 			if (step.active === false){
 				stepButton.src = "resources/padOn.png";
 				step.active = true;
-				step.value = "c4";
+				step.value = "C4";
 				channel.changeNote(step.index, step.value);
 			} else {
 				stepButton.src = "resources/pad.png";
@@ -723,21 +762,32 @@ function synth(channel, index) {
     var my = this;
     this.index = index;
     this.name = "Normal Synth";
+    this.attack = 0.5;
+    this.decay = 0.5;
+    this.sustain = 0.5;
+    this.release = 0.5;
     this.node = new Tone.Synth();
+    //my.node.attack.value = my.attack;
     my.node.volume.value = channel.volume;
 
-    this.testP;
+    this.attackSlider;
+
+    var arr = [];
+    this.parameterArray = arr;
+
+    //adds ADSR parameters to parameter array
+    addSynthADSR(my);
 
     this.add = function () {
-        var synthInfoDiv = document.getElementById(channel.index + "SynthInfoDiv");
-        var testP = document.createElement('p');
-        testP.innerHTML = my.name;
-        synthInfoDiv.appendChild(testP);
-        my.testP = testP;
+        drawSynthInfoValues(channel);
+        //all asdr sliders should point to the same amp that the synth change connects/disconnects to
+        //add should set amp asdr to synths own 
+        var attackSlider_EventHandler = new sliderListener(my.parameterArray[0], )
     };
 
     this.remove = function () {
-        my.testP.remove();
+        var sliderDiv = document.getElementById(channel.index + "SliderDiv");
+        sliderDiv.remove();
     };
 }
 
@@ -872,7 +922,6 @@ function polySynth(channel, index) {
         my.testP.remove();
     };
 }
-
 //sampler
 function sampler(channel, index) {
     var my = this;
@@ -883,27 +932,47 @@ function sampler(channel, index) {
 
     this.sampleButton;
 
+    //draw info
     this.add = function () {
+        //button to add sample 
         var synthInfoDiv = document.getElementById(channel.index + "SynthInfoDiv");
         var sampleButton = document.createElement('input');
-        sampleButton.type = "button";
-        sampleButton.classList.add("button");
-        sampleButton.value = "Choose Sample";
+        sampleButton.type = "file";
+        sampleButton.accept = ".mp3";
+        //sampleButton.classList.add("button");
+        sampleButton.innerHTML = "Choose Sample";
         synthInfoDiv.appendChild(sampleButton);
         my.sampleButton = sampleButton;
         my.btnChangeSample_EventHandler();
+
+
     };
 
+    //remove elements for this div
     this.remove = function () {
         my.sampleButton.remove();
     };
 
+    //new sample button event handler
     this.btnChangeSample_EventHandler = function () {
-        my.sampleButton.addEventListener("click", function () {
-            console.log("input sample");
+        my.sampleButton.addEventListener("input", function (event) {
+            var file = event.target.files[0];
+            var reader = new FileReader();
+
+            var fileString;
+
+            reader.onload = function (event) {
+                fileString = event.target.result;
+                my.node.samples = { C4: fileString };
+                console.log(my.node.samples);
+            }
+            
+            reader.readAsDataURL(file);
+
         });
     };
 }
+
 
 //pan controller obj
 function pan(channel) {
@@ -911,6 +980,7 @@ function pan(channel) {
     this.index;
     this.node = new Tone.PanVol(channel.pan, 0);
 }
+
 
 //object containing parameter info names vlaues ect
 function parameterInfoObj(Name, idName, min, max, defaultValue, divider) {
@@ -964,6 +1034,20 @@ function effectButtonListener(effect, channel) {
     };
 }
 
+function addSynthADSR(synth) {
+    //attack
+    var attackObj = new parameterInfoObj("Attack", "Attack", 0, 100, synth.attack, 100);
+    synth.parameterArray.push(attackObj);
+    //decay
+    var decayObj = new parameterInfoObj("Decay", "Decay", 0, 100, synth.decay, 100);
+    synth.parameterArray.push(decayObj);
+    //sustain
+    var sustainObj = new parameterInfoObj("Sustain", "Sustain", 0, 100, synth.sustain, 100);
+    synth.parameterArray.push(sustainObj);
+    //release
+    var releaseObj = new parameterInfoObj("Release", "Release", 0, 100, synth.release, 100);
+    synth.parameterArray.push(releaseObj);
+}
 
 //add channel to channel list and draw it
 function addChannel() {
