@@ -265,7 +265,8 @@ function drawSynthInfoValues(channel) {
 function channelObj(chName, chVolume, chPan, chIndex){
 	this.name = chName;
 	this.pan = chPan;
-	this.volume = chVolume;
+    this.volume = chVolume;
+
 	this.index = chIndex;
     this.muted = false;
     this.synthInfoShowing = false;
@@ -295,22 +296,31 @@ function channelObj(chName, chVolume, chPan, chIndex){
 	
 	//create synth node, add to array
     this.source = channel.synthArray[0];
-	channel.nodeArray.push(channel.source);
-	
+    channel.nodeArray.push(channel.source);
+
+    //create amp node, add to array
+    this.ampEnvelope = new ampEnvelope(channel);
+    channel.nodeArray.push(channel.ampEnvelope);
+
 	//create pan node, add to array
 	this.panNode = new pan(channel);
 	channel.nodeArray.push(channel.panNode);
-	
-	//connect synth to pan
-	channel.source.node.connect(channel.panNode.node);
-	
+
+	//connect synth to env then env to pan
+    channel.source.node.chain(channel.ampEnvelope.node, channel.panNode.node)
+
 	//apply final node in array to master
-	channel.nodeArray[channel.nodeArray.length - 1].node.toMaster();
-	
+    channel.nodeArray[channel.nodeArray.length - 1].node.toMaster();
+
 	//create sequence for synth from array
-	this.sequence = new Tone.Sequence(function(time, note) {
-		channel.source.node.triggerAttackRelease(note,"8n");
-	}, channel.noteArray, "8n");	
+    this.sequence = new Tone.Sequence(
+        function (time, note) {
+            channel.source.node.triggerAttackRelease(note, "8n");
+            channel.ampEnvelope.node.triggerAttackRelease("8n");
+        },
+        channel.noteArray,
+        "8n");	
+
 	channel.sequence.start();
 
 	//CREATE EFFECTS OBJECT
@@ -406,7 +416,14 @@ function channelObj(chName, chVolume, chPan, chIndex){
                 }
 
                 //for every parameter of synth
+                remove("SliderDiv", _channel.index, i);
 
+                var synthParameterArray = channel.source.parameterArray;
+                for (x = 0; x < synthParameterArray.length; x++) {
+                    var parameter = synthParameterArray[x];
+                    remove(parameter.idName + "Slider", _channel.index, i);
+                    remove(parameter.idName + "Display", _channel.index, i);
+                }
 
 				//set index to new place
 				_channel.index = i;				
@@ -451,19 +468,23 @@ function channelObj(chName, chVolume, chPan, chIndex){
 		let seqNameTag = document.getElementById(channel.index + "SeqNameLabel");
 		
 		chNameTag.addEventListener("click", function(){
-			var newName = prompt("Enter channel name:");
-			chNameTag.innerHTML = newName;		
-			seqNameTag.innerHTML = newName;
-				
-			channel.name = newName;			
+            var newName = prompt("Enter channel name:");
+            if (!(newName == "")) {
+                chNameTag.innerHTML = newName;
+                seqNameTag.innerHTML = newName;
+
+                channel.name = newName;
+            }		
 		});
 		
 		seqNameTag.addEventListener("click", function(){
 			var newName = prompt("Enter channel name:");
-			chNameTag.innerHTML = newName;		
-			seqNameTag.innerHTML = newName;
-				
-			channel.name = newName;				
+            if (!(newName == "")) {
+                chNameTag.innerHTML = newName;
+                seqNameTag.innerHTML = newName;
+
+                channel.name = newName;
+            }			
 		});
 		
 		//show effects on div click
@@ -506,13 +527,12 @@ function channelObj(chName, chVolume, chPan, chIndex){
                     i = channel.synthArray.length;
                 }
             }
-            channel.source.node.disconnect(channel.panNode.node);
+            channel.source.node.disconnect(channel.ampEnvelope.node);
             channel.source.remove();
-            synth.node.connect(channel.panNode.node);
+            synth.node.connect(channel.ampEnvelope.node);
             channel.source = synth;
             channel.source.add();            
         });
-
 
 		//call effects event listeners
 		channel.effects.startEventListeners();
@@ -529,7 +549,8 @@ function channelObj(chName, chVolume, chPan, chIndex){
 		}	
 		
 		channel.sequence = new Tone.Sequence(function(time, note) {
-			channel.source.node.triggerAttackRelease(note,"8n");
+            channel.source.node.triggerAttackRelease(note, "8n");
+            channel.ampEnvelope.node.triggerAttackRelease("8n");
 		}, channel.noteArray, "8n");		
 		channel.sequence.start();
 		
@@ -675,18 +696,18 @@ function reverbObj(channel){
 
     //room size
     //set and send default parameter data to parameter array
-    var roomSizeInfo = new parameterInfoObj("Room Size", "ReverbRoomSize", 0, 100, my.reverbRoomSize, 100);
+    var roomSizeInfo = new parameterInfoObj("Room Size", "ReverbRoomSize", 0, 100, my.reverbRoomSize, 100, my.node.roomSize);
     my.parameterArray.push(roomSizeInfo);
 	//event listener for room size
-    this.sliderReverbRoomSize_EventHandler = new sliderListener(roomSizeInfo, my.node.roomSize, channel);
+    this.sliderReverbRoomSize_EventHandler = new sliderListener(roomSizeInfo, channel);
     my.listenerArray.push(my.sliderReverbRoomSize_EventHandler);
 
     //dampening
     //set and send default parameter data to parameter array
-    var dampeningInfo = new parameterInfoObj("Dampening", "ReverbDampening", 0, 5000, my.reverbDampening, 1);
+    var dampeningInfo = new parameterInfoObj("Dampening", "ReverbDampening", 0, 5000, my.reverbDampening, 1, my.node.dampening);
     my.parameterArray.push(dampeningInfo);
 	//event listener for reverb dampening
-    this.sliderReverbDampening_EventHandler = new sliderListener(dampeningInfo, my.node.dampening, channel);
+    this.sliderReverbDampening_EventHandler = new sliderListener(dampeningInfo, channel);
     my.listenerArray.push(my.sliderReverbDampening_EventHandler);
     
 	//event listener for cconnect/disconnect button
@@ -713,16 +734,16 @@ function delayObj(channel){
 
     //delay time
     //set and send default parameter data to parameter array
-    var delayTimeInfo = new parameterInfoObj("Delay Time", "DelayDelayTime", 0, 100, my.delayTime, 100);
+    var delayTimeInfo = new parameterInfoObj("Delay Time", "DelayDelayTime", 0, 100, my.delayTime, 100, my.node.delayTime);
     my.parameterArray.push(delayTimeInfo);
     //listener for delay time
-    this.delayTimeSlider_EventHandler = new sliderListener(delayTimeInfo, my.node.delayTime, channel);
+    this.delayTimeSlider_EventHandler = new sliderListener(delayTimeInfo, channel);
     my.listenerArray.push(my.delayTimeSlider_EventHandler);
 
     //feedback
-    var feedbackInfo = new parameterInfoObj("Feedback", "DelayFeedback", 0, 100, my.feedback, 100);
+    var feedbackInfo = new parameterInfoObj("Feedback", "DelayFeedback", 0, 100, my.feedback, 100, my.node.feedback);
     my.parameterArray.push(feedbackInfo);
-    this.delayFeedbackSlider_EventHandler = new sliderListener(feedbackInfo, my.node.feedback, channel);
+    this.delayFeedbackSlider_EventHandler = new sliderListener(feedbackInfo, channel);
     my.listenerArray.push(my.delayFeedbackSlider_EventHandler);
 
     //connect/disconect button
@@ -746,9 +767,9 @@ function autoPannerObj(channel){
     this.listenerArray = arr2;
 
     //frequency
-    var frequencyInfo = new parameterInfoObj("Frequency", "AutoPannerFrequency", 0, 5000, my.frequency, 1);
+    var frequencyInfo = new parameterInfoObj("Frequency", "AutoPannerFrequency", 0, 5000, my.frequency, 1, my.node.frequency);
     my.parameterArray.push(frequencyInfo);
-    this.autoPannerFrequencySlider_EventHandler = new sliderListener(frequencyInfo, my.node.frequency, channel);
+    this.autoPannerFrequencySlider_EventHandler = new sliderListener(frequencyInfo, channel);
     my.listenerArray.push(my.autoPannerFrequencySlider_EventHandler);
 
     //connect buitton
@@ -762,32 +783,37 @@ function synth(channel, index) {
     var my = this;
     this.index = index;
     this.name = "Normal Synth";
-    this.attack = 0.5;
-    this.decay = 0.5;
-    this.sustain = 0.5;
-    this.release = 0.5;
-    this.node = new Tone.Synth();
-    //my.node.attack.value = my.attack;
-    my.node.volume.value = channel.volume;
 
-    this.attackSlider;
+    this.attack = 0.3;
+    this.decay = 0.5;
+    this.sustain = 0.7;
+    this.release = 3;
+
+    this.node = new Tone.Synth();
+    my.node.volume.value = channel.volume;
 
     var arr = [];
     this.parameterArray = arr;
 
-    //adds ADSR parameters to parameter array
-    addSynthADSR(my);
-
     this.add = function () {
+        //adds ADSR parameter definitions to parameter array (sets parameter array 0-3 to attack, decay, sustain, release)
+        addSynthADSR(my, channel);
+        //draw sliders for synth parameters
         drawSynthInfoValues(channel);
-        //all asdr sliders should point to the same amp that the synth change connects/disconnects to
-        //add should set amp asdr to synths own 
-        var attackSlider_EventHandler = new sliderListener(my.parameterArray[0], )
+        //set adsr values for amp envelope
+        channel.ampEnvelope.node.attack = my.parameterArray[0].value;
+        channel.ampEnvelope.node.decay = my.parameterArray[1].value;
+        channel.ampEnvelope.node.sustain = my.parameterArray[2].value;
+        channel.ampEnvelope.node.release = my.parameterArray[3].value;
+        //create sliders
+        addSynthListeners(my, channel);
     };
 
     this.remove = function () {
+        //remove sliders div and set parameter array to nothing 
         var sliderDiv = document.getElementById(channel.index + "SliderDiv");
         sliderDiv.remove();
+        my.parameterArray = [];
     };
 }
 
@@ -795,21 +821,37 @@ function AMSynth(channel, index) {
     var my = this;
     this.index = index;
     this.name = "AMSynth";
+
+    this.attack = 0.3;
+    this.decay = 0.5;
+    this.sustain = 0.7;
+    this.release = 3;
+
     this.node = new Tone.AMSynth();
     my.node.volume.value = channel.volume;
 
-    this.testP;
+    var arr = [];
+    this.parameterArray = arr;
 
     this.add = function () {
-        var synthInfoDiv = document.getElementById(channel.index + "SynthInfoDiv");
-        var testP = document.createElement('p');
-        testP.innerHTML = my.name;
-        synthInfoDiv.appendChild(testP);
-        my.testP = testP;
+        //adds ADSR parameter definitions to parameter array (sets parameter array 0-3 to attack, decay, sustain, release)
+        addSynthADSR(my, channel);
+        //draw sliders for synth parameters
+        drawSynthInfoValues(channel);
+        //set adsr values for amp envelope
+        channel.ampEnvelope.node.attack = my.parameterArray[0].value;
+        channel.ampEnvelope.node.decay = my.parameterArray[1].value;
+        channel.ampEnvelope.node.sustain = my.parameterArray[2].value;
+        channel.ampEnvelope.node.release = my.parameterArray[3].value;
+        //create sliders
+        addSynthListeners(my, channel);
     };
 
     this.remove = function () {
-        my.testP.remove();
+        //remove sliders div and set parameter array to nothing 
+        var sliderDiv = document.getElementById(channel.index + "SliderDiv");
+        sliderDiv.remove();
+        my.parameterArray = [];
     };
 }
 
@@ -817,21 +859,37 @@ function duoSynth(channel, index) {
     var my = this;
     this.index = index;
     this.name = "duoSynth";
+
+    this.attack = 0.3;
+    this.decay = 0.5;
+    this.sustain = 0.7;
+    this.release = 3;
+
     this.node = new Tone.DuoSynth();
     my.node.volume.value = channel.volume;
 
-    this.testP;
+    var arr = [];
+    this.parameterArray = arr;
 
     this.add = function () {
-        var synthInfoDiv = document.getElementById(channel.index + "SynthInfoDiv");
-        var testP = document.createElement('p');
-        testP.innerHTML = my.name;
-        synthInfoDiv.appendChild(testP);
-        my.testP = testP;
+        //adds ADSR parameter definitions to parameter array (sets parameter array 0-3 to attack, decay, sustain, release)
+        addSynthADSR(my, channel);
+        //draw sliders for synth parameters
+        drawSynthInfoValues(channel);
+        //set adsr values for amp envelope
+        channel.ampEnvelope.node.attack = my.parameterArray[0].value;
+        channel.ampEnvelope.node.decay = my.parameterArray[1].value;
+        channel.ampEnvelope.node.sustain = my.parameterArray[2].value;
+        channel.ampEnvelope.node.release = my.parameterArray[3].value;
+        //create sliders
+        addSynthListeners(my, channel);
     };
 
     this.remove = function () {
-        my.testP.remove();
+        //remove sliders div and set parameter array to nothing 
+        var sliderDiv = document.getElementById(channel.index + "SliderDiv");
+        sliderDiv.remove();
+        my.parameterArray = [];
     };
 }
 
@@ -839,21 +897,37 @@ function FMSynth(channel, index) {
     var my = this;
     this.index = index;
     this.name = "FMSynth";
+
+    this.attack = 0.3;
+    this.decay = 0.5;
+    this.sustain = 0.7;
+    this.release = 3;
+
     this.node = new Tone.FMSynth();
     my.node.volume.value = channel.volume;
 
-    this.testP;
+    var arr = [];
+    this.parameterArray = arr;
 
     this.add = function () {
-        var synthInfoDiv = document.getElementById(channel.index + "SynthInfoDiv");
-        var testP = document.createElement('p');
-        testP.innerHTML = my.name;
-        synthInfoDiv.appendChild(testP);
-        my.testP = testP;
+        //adds ADSR parameter definitions to parameter array (sets parameter array 0-3 to attack, decay, sustain, release)
+        addSynthADSR(my, channel);
+        //draw sliders for synth parameters
+        drawSynthInfoValues(channel);
+        //set adsr values for amp envelope
+        channel.ampEnvelope.node.attack = my.parameterArray[0].value;
+        channel.ampEnvelope.node.decay = my.parameterArray[1].value;
+        channel.ampEnvelope.node.sustain = my.parameterArray[2].value;
+        channel.ampEnvelope.node.release = my.parameterArray[3].value;
+        //create sliders
+        addSynthListeners(my, channel);
     };
 
     this.remove = function () {
-        my.testP.remove();
+        //remove sliders div and set parameter array to nothing 
+        var sliderDiv = document.getElementById(channel.index + "SliderDiv");
+        sliderDiv.remove();
+        my.parameterArray = [];
     };
 }
 
@@ -861,21 +935,37 @@ function membraneSynth(channel, index) {
     var my = this;
     this.index = index;
     this.name = "Membrane Synth";
+
+    this.attack = 0.3;
+    this.decay = 0.5;
+    this.sustain = 0.7;
+    this.release = 3;
+
     this.node = new Tone.MembraneSynth();
     my.node.volume.value = channel.volume;
 
-    this.testP;
+    var arr = [];
+    this.parameterArray = arr;
 
     this.add = function () {
-        var synthInfoDiv = document.getElementById(channel.index + "SynthInfoDiv");
-        var testP = document.createElement('p');
-        testP.innerHTML = my.name;
-        synthInfoDiv.appendChild(testP);
-        my.testP = testP;
+        //adds ADSR parameter definitions to parameter array (sets parameter array 0-3 to attack, decay, sustain, release)
+        addSynthADSR(my, channel);
+        //draw sliders for synth parameters
+        drawSynthInfoValues(channel);
+        //set adsr values for amp envelope
+        channel.ampEnvelope.node.attack = my.parameterArray[0].value;
+        channel.ampEnvelope.node.decay = my.parameterArray[1].value;
+        channel.ampEnvelope.node.sustain = my.parameterArray[2].value;
+        channel.ampEnvelope.node.release = my.parameterArray[3].value;
+        //create sliders
+        addSynthListeners(my, channel);
     };
 
     this.remove = function () {
-        my.testP.remove();
+        //remove sliders div and set parameter array to nothing 
+        var sliderDiv = document.getElementById(channel.index + "SliderDiv");
+        sliderDiv.remove();
+        my.parameterArray = [];
     };
 }
 
@@ -883,21 +973,37 @@ function pluckSynth(channel, index) {
     var my = this;
     this.index = index;
     this.name = "Pluck Synth";
+
+    this.attack = 0.3;
+    this.decay = 0.5;
+    this.sustain = 0.7;
+    this.release = 3;
+
     this.node = new Tone.PluckSynth();
     my.node.volume.value = channel.volume;
 
-    this.testP;
+    var arr = [];
+    this.parameterArray = arr;
 
     this.add = function () {
-        var synthInfoDiv = document.getElementById(channel.index + "SynthInfoDiv");
-        var testP = document.createElement('p');
-        testP.innerHTML = my.name;
-        synthInfoDiv.appendChild(testP);
-        my.testP = testP;
+        //adds ADSR parameter definitions to parameter array (sets parameter array 0-3 to attack, decay, sustain, release)
+        addSynthADSR(my, channel);
+        //draw sliders for synth parameters
+        drawSynthInfoValues(channel);
+        //set adsr values for amp envelope
+        channel.ampEnvelope.node.attack = my.parameterArray[0].value;
+        channel.ampEnvelope.node.decay = my.parameterArray[1].value;
+        channel.ampEnvelope.node.sustain = my.parameterArray[2].value;
+        channel.ampEnvelope.node.release = my.parameterArray[3].value;
+        //create sliders
+        addSynthListeners(my, channel);
     };
 
     this.remove = function () {
-        my.testP.remove();
+        //remove sliders div and set parameter array to nothing 
+        var sliderDiv = document.getElementById(channel.index + "SliderDiv");
+        sliderDiv.remove();
+        my.parameterArray = [];
     };
 }
 
@@ -905,21 +1011,37 @@ function polySynth(channel, index) {
     var my = this;
     this.index = index;
     this.name = "Poly Synth";
+
+    this.attack = 0.3;
+    this.decay = 0.5;
+    this.sustain = 0.7;
+    this.release = 3;
+
     this.node = new Tone.PolySynth();
     my.node.volume.value = channel.volume;
 
-    this.testP;
+    var arr = [];
+    this.parameterArray = arr;
 
     this.add = function () {
-        var synthInfoDiv = document.getElementById(channel.index + "SynthInfoDiv");
-        var testP = document.createElement('p');
-        testP.innerHTML = my.name;
-        synthInfoDiv.appendChild(testP);
-        my.testP = testP;
+        //adds ADSR parameter definitions to parameter array (sets parameter array 0-3 to attack, decay, sustain, release)
+        addSynthADSR(my, channel);
+        //draw sliders for synth parameters
+        drawSynthInfoValues(channel);
+        //set adsr values for amp envelope
+        channel.ampEnvelope.node.attack = my.parameterArray[0].value;
+        channel.ampEnvelope.node.decay = my.parameterArray[1].value;
+        channel.ampEnvelope.node.sustain = my.parameterArray[2].value;
+        channel.ampEnvelope.node.release = my.parameterArray[3].value;
+        //create sliders
+        addSynthListeners(my, channel);
     };
 
     this.remove = function () {
-        my.testP.remove();
+        //remove sliders div and set parameter array to nothing 
+        var sliderDiv = document.getElementById(channel.index + "SliderDiv");
+        sliderDiv.remove();
+        my.parameterArray = [];
     };
 }
 //sampler
@@ -927,48 +1049,80 @@ function sampler(channel, index) {
     var my = this;
     this.index = index;
     this.name = "Sampler";
+
+    this.attack = 0.3;
+    this.decay = 0.5;
+    this.sustain = 0.7;
+    this.release = 3;
+
     this.node = new Tone.Sampler();
     my.node.volume.value = channel.volume;
+
+    var arr = [];
+    this.parameterArray = arr;
 
     this.sampleButton;
 
     //draw info
     this.add = function () {
-        //button to add sample 
-        var synthInfoDiv = document.getElementById(channel.index + "SynthInfoDiv");
-        var sampleButton = document.createElement('input');
-        sampleButton.type = "file";
-        sampleButton.accept = ".mp3";
-        //sampleButton.classList.add("button");
-        sampleButton.innerHTML = "Choose Sample";
-        synthInfoDiv.appendChild(sampleButton);
-        my.sampleButton = sampleButton;
-        my.btnChangeSample_EventHandler();
+        //adds ADSR parameter definitions to parameter array (sets parameter array 0-3 to attack, decay, sustain, release)
+        addSynthADSR(my, channel);
+        //draw sliders for synth parameters
+        drawSynthInfoValues(channel);
+        //set adsr values for amp envelope
+        channel.ampEnvelope.node.attack = my.parameterArray[0].value;
+        channel.ampEnvelope.node.decay = my.parameterArray[1].value;
+        channel.ampEnvelope.node.sustain = my.parameterArray[2].value;
+        channel.ampEnvelope.node.release = my.parameterArray[3].value;
+        //create sliders
+        addSynthListeners(my, channel);
 
+         //get synth info div
+        var synthInfoDiv = document.getElementById(channel.index + "SynthInfoDiv");
+        //button to add sample
+        var sampleInput = document.createElement('input');
+        sampleInput.type = "file";
+        sampleInput.accept = ".mp3";
+        sampleInput.innerHTML = "Choose Sample";
+        synthInfoDiv.appendChild(sampleInput);
+        my.sampleButton = sampleInput;
+        my.inputChangeSample_EventHandler();
 
     };
 
     //remove elements for this div
     this.remove = function () {
+        //remove sliders div and set parameter array to nothing 
+        var sliderDiv = document.getElementById(channel.index + "SliderDiv");
+        sliderDiv.remove();
+        my.parameterArray = [];
+
+        //remove button
         my.sampleButton.remove();
     };
 
     //new sample button event handler
-    this.btnChangeSample_EventHandler = function () {
+    this.inputChangeSample_EventHandler = function () {
         my.sampleButton.addEventListener("input", function (event) {
             var file = event.target.files[0];
             var reader = new FileReader();
 
             var fileString;
 
+            //try get data url and set new sampler with data url and see if it can call 
+            //if not find different way of getting file string
+            //if not find sample repository online
+
             reader.onload = function (event) {
                 fileString = event.target.result;
-                my.node.samples = { C4: fileString };
+                my.node = new Tone.Sampler({
+                    "C4": "sample.mp3"
+                });
+                my.node.debug = true;
                 console.log(my.node.samples);
             }
             
             reader.readAsDataURL(file);
-
         });
     };
 }
@@ -981,9 +1135,16 @@ function pan(channel) {
     this.node = new Tone.PanVol(channel.pan, 0);
 }
 
+//amplitude envelope
+function ampEnvelope(channel) {
+    my = this;
+    this.index;
+    this.node = new Tone.AmplitudeEnvelope();
+}
+
 
 //object containing parameter info names vlaues ect
-function parameterInfoObj(Name, idName, min, max, defaultValue, divider) {
+function parameterInfoObj(Name, idName, min, max, defaultValue, divider, nodeParameter) {
     my = this;
     this.name = Name;
     this.idName = idName;
@@ -993,10 +1154,11 @@ function parameterInfoObj(Name, idName, min, max, defaultValue, divider) {
     this.value = defaultValue
     this.divider = divider;
     this.sliderValue = my.defaultValue * my.divider;
+    my.nodeParameter = nodeParameter;
 }
 
 //object containing method for initiating slider listeners
-function sliderListener(parameterObj, nodeParameter, channel) {
+function sliderListener(parameterObj, channel, addDotValue) {
 
     this.start = function () {
         var slider = document.getElementById(channel.index + parameterObj.idName + "Slider");
@@ -1008,7 +1170,12 @@ function sliderListener(parameterObj, nodeParameter, channel) {
             var display = document.getElementById(channel.index + parameterObj.idName + "Display");
             display.innerHTML = parameterObj.value;
 
-            nodeParameter.value = parameterObj.value;
+            if (addDotValue === false) {
+                parameterObj.nodeParameter = parameterObj.value;
+            } else {
+                parameterObj.nodeParameter.value = parameterObj.value;
+            }
+            
         });
     };
 }
@@ -1036,18 +1203,81 @@ function effectButtonListener(effect, channel) {
 
 function addSynthADSR(synth) {
     //attack
-    var attackObj = new parameterInfoObj("Attack", "Attack", 0, 100, synth.attack, 100);
+    var attackObj = new parameterInfoObj("Attack", "Attack", 0, 200, synth.attack, 100);
     synth.parameterArray.push(attackObj);
     //decay
-    var decayObj = new parameterInfoObj("Decay", "Decay", 0, 100, synth.decay, 100);
+    var decayObj = new parameterInfoObj("Decay", "Decay", 0, 200, synth.decay, 100);
     synth.parameterArray.push(decayObj);
     //sustain
     var sustainObj = new parameterInfoObj("Sustain", "Sustain", 0, 100, synth.sustain, 100);
     synth.parameterArray.push(sustainObj);
     //release
-    var releaseObj = new parameterInfoObj("Release", "Release", 0, 100, synth.release, 100);
+    var releaseObj = new parameterInfoObj("Release", "Release", 1, 500, synth.release, 100);
     synth.parameterArray.push(releaseObj);
 }
+
+function addSynthListeners(synth, channel) {
+    //attack listener
+    var attackObj = synth.parameterArray[0];
+
+    var attackSlider = document.getElementById(channel.index + attackObj.idName + "Slider");
+    attackSlider.addEventListener("input", function () {
+        var val = attackSlider.value;
+
+        attackObj.value = val / attackObj.divider;
+
+        var display = document.getElementById(channel.index + attackObj.idName + "Display");
+        display.innerHTML = attackObj.value;
+
+        channel.ampEnvelope.node.attack = attackObj.value;
+    });
+
+    //decay listener
+    var decayObj = synth.parameterArray[1];
+
+    var decaySlider = document.getElementById(channel.index + decayObj.idName + "Slider");
+    decaySlider.addEventListener("input", function () {
+        var val = decaySlider.value;
+
+        decayObj.value = val / decayObj.divider;
+
+        var display = document.getElementById(channel.index + decayObj.idName + "Display");
+        display.innerHTML = decayObj.value;
+
+        channel.ampEnvelope.node.decay = decayObj.value;
+    });
+
+    //sustain listener
+    var sustainObj = synth.parameterArray[2];
+
+    var sustainSlider = document.getElementById(channel.index + sustainObj.idName + "Slider");
+    sustainSlider.addEventListener("input", function () {
+        var val = sustainSlider.value;
+
+        sustainObj.value = val / sustainObj.divider;
+
+        var display = document.getElementById(channel.index + sustainObj.idName + "Display");
+        display.innerHTML = sustainObj.value;
+
+        channel.ampEnvelope.node.sustain = sustainObj.value;
+    });
+
+    //release listener
+    var releaseObj = synth.parameterArray[3];
+
+    var releaseSlider = document.getElementById(channel.index + releaseObj.idName + "Slider");
+    releaseSlider.addEventListener("input", function () {
+        var val = releaseSlider.value;
+
+        releaseObj.value = val / releaseObj.divider;
+
+        var display = document.getElementById(channel.index + releaseObj.idName + "Display");
+        display.innerHTML = releaseObj.value;
+
+        channel.ampEnvelope.node.release = releaseObj.value;
+    });
+};
+
 
 //add channel to channel list and draw it
 function addChannel() {
