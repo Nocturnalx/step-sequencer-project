@@ -164,7 +164,7 @@ function drawSequencer(channel) {
         var noteDisplay = document.createElement('div');
         noteDisplay.classList.add("centeredText");
         noteDisplay.innerHTML = step.note;
-        noteDisplay.id = step.channelIndex + "StepNoteDisplay" + step.Index;
+        noteDisplay.id = step.channelIndex + "StepNoteDisplay" + step.index;
         container.appendChild(noteDisplay);
 
 		step.startEventListeners();
@@ -338,8 +338,7 @@ function channelObj(chName, chVolume, chPan, chIndex){
         function (time, note) {
             channel.source.node.triggerAttackRelease(note, "8n");
             channel.ampEnvelope.node.triggerAttackRelease("8n");
-        },
-        channel.noteArray, "8n");	
+        }, channel.noteArray, "8n");	
 
 	channel.sequence.start();
 
@@ -415,8 +414,9 @@ function channelObj(chName, chVolume, chPan, chIndex){
                 remove("SynthDropDown", _channel.index, i);
 				
 				for(n = 0; n < 8; n++){
-                    remove("step" + n, _channel.index, i);
-                    remove("stepImg" + n, _channel.index, i);
+                    remove("Step" + n, _channel.index, i);
+                    remove("StepImg" + n, _channel.index, i);
+                    remove("StepNoteDisplay" + n, _channel.index, i);
 				}
 				
 				//change effects containers ids
@@ -570,7 +570,7 @@ function channelObj(chName, chVolume, chPan, chIndex){
 		if (playing === true){
 			Tone.Transport.stop();
 		}	
-		
+
 		channel.sequence = new Tone.Sequence(function(time, note) {
             channel.source.node.triggerAttackRelease(note, "8n");
             channel.ampEnvelope.node.triggerAttackRelease("8n");
@@ -638,7 +638,6 @@ function channelObj(chName, chVolume, chPan, chIndex){
 			return -1;
 		}
     };
-
 }
 
 //instantiate new step object (individual steps for each channel)
@@ -649,12 +648,10 @@ function stepObj(channel, stepNo){
     this.note = "C4";
 	var step = this;
 	
-	channel.changeNote(step.index, step.value);
-	
 	this.startEventListeners = function(){
 		var stepButton = document.getElementById(step.channelIndex + "Step" + step.index);
         var stepImg = document.getElementById(step.channelIndex + "StepImg" + step.index);
-        var stepNoteDisplay = document.getElementById(step.channelIndex + "StepNoteDisplay" + step.Index);
+        var stepNoteDisplay = document.getElementById(step.channelIndex + "StepNoteDisplay" + step.index);
 
 		stepButton.addEventListener("click",function(){
             if (step.active === false) {
@@ -669,10 +666,25 @@ function stepObj(channel, stepNo){
 			}
         });
 
-        stepButton.addEventListener("dblclick", function () {
-            this.note = prompt("enter note");
-            channel.changeNote(step.index, step.note);
-            stepNoteDisplay.innerHTML = step.note;
+        stepButton.addEventListener("auxclick", function (e) {       
+            if (e.button == 1) {
+                var newNote = prompt("enter note");   
+                if (!(newNote == "")) {
+                    //try catch here to make sure what is being passed is a note
+                    if (newNote.length == 2) {
+                        if (/A|B|C|D|E|F|G/i.test(newNote.split("")[0]) && /0|1|2|3|4|5|6|7|8|9/.test(newNote.split("")[1])) {
+                            step.note = newNote;
+                            stepNoteDisplay.innerHTML = step.note;
+                            console.log(step.note);
+                            if (step.active) {
+                                channel.changeNote(step.index, step.note);
+                            }
+                        } else {
+                            console.log(newNote + "is note a valid note notes are in the following notation: C4, A3, F#5...etc");
+                        }
+                    }
+                }         
+            }           
         });
 	}
 }
@@ -691,9 +703,12 @@ function effectsObj(channel){
     //delay
     this.delay = new delayObj(channel);
     effects.effectsArray.push(effects.delay);
-    //chorus
-    this.AutoPanner = new autoPannerObj(channel);
-    effects.effectsArray.push(effects.AutoPanner);
+    //auto panner
+    this.autoPanner = new autoPannerObj(channel);
+    effects.effectsArray.push(effects.autoPanner);
+    //distortion
+    this.distortion = new distortionObj(channel);
+    effects.effectsArray.push(effects.distortion);
 	
 	//starts all event listeners for each effect
 	this.startEventListeners = function(){
@@ -787,7 +802,7 @@ function autoPannerObj(channel){
     this.connected = false;
     this.index;
     this.name = "Auto Panner";
-    this.frequency = 300;
+    this.frequency = 2;
     this.node = new Tone.AutoPanner(my.frequency);
 
     var arr1 = [];
@@ -797,10 +812,37 @@ function autoPannerObj(channel){
     this.listenerArray = arr2;
 
     //frequency
-    var frequencyInfo = new parameterInfoObj("Frequency", "AutoPannerFrequency", 0, 5000, my.frequency, 1, my.node.frequency);
+    var frequencyInfo = new parameterInfoObj("Frequency", "AutoPannerFrequency", 0, 500, my.frequency, 100, my.node.frequency);
     my.parameterArray.push(frequencyInfo);
     this.autoPannerFrequencySlider_EventHandler = new sliderListener(frequencyInfo, channel);
     my.listenerArray.push(my.autoPannerFrequencySlider_EventHandler);
+
+    //connect buitton
+    my.connectButton_EventHandler = new effectButtonListener(my, channel);
+    my.listenerArray.push(my.connectButton_EventHandler);
+}
+
+//Distortion
+function distortionObj(channel) {
+    var my = this;
+    this.connected = false;
+    this.index;
+    this.name = "Distortion";
+    this.distortion = 1;
+    this.wet = 0.3;
+    this.node = new Tone.Distortion({ "distortion": my.distortion });
+
+    var arr1 = [];
+    this.parameterArray = arr1;
+
+    var arr2 = [];
+    this.listenerArray = arr2;
+
+    //frequency
+    var distortionWetInfo = new parameterInfoObj("Distortion Wet", "DistortionWet", 0, 100, my.wet, 100, my.node.wet);
+    my.parameterArray.push(distortionWetInfo);
+    this.distortionWetSlider_EventHandler = new sliderListener(distortionWetInfo, channel);
+    my.listenerArray.push(my.distortionWetSlider_EventHandler);
 
     //connect buitton
     my.connectButton_EventHandler = new effectButtonListener(my, channel);
@@ -1113,7 +1155,7 @@ function sampler(channel, index) {
         //button to add sample
         var sampleInput = document.createElement('input');
         sampleInput.type = "file";
-        sampleInput.accept = ".mp3";
+        sampleInput.accept = ".mp3, .m4a, .wav, ";
         sampleInput.innerHTML = "Choose Sample";
         synthInfoDiv.appendChild(sampleInput);
         my.sampleButton = sampleInput;
@@ -1199,7 +1241,6 @@ function sliderListener(parameterObj, channel, addDotValue) {
             } else {
                 parameterObj.nodeParameter.value = parameterObj.value;
             }
-            
         });
     };
 }
@@ -1254,6 +1295,7 @@ function addSynthListeners(synth, channel) {
         display.innerHTML = attackObj.value;
 
         channel.ampEnvelope.node.attack = attackObj.value;
+        synth.attack = attackObj.value;
     });
 
     //decay listener
@@ -1269,6 +1311,7 @@ function addSynthListeners(synth, channel) {
         display.innerHTML = decayObj.value;
 
         channel.ampEnvelope.node.decay = decayObj.value;
+        synth.decay = decayObj.value;
     });
 
     //sustain listener
@@ -1284,6 +1327,7 @@ function addSynthListeners(synth, channel) {
         display.innerHTML = sustainObj.value;
 
         channel.ampEnvelope.node.sustain = sustainObj.value;
+        synth.sustain = sustainObj.value;
     });
 
     //release listener
@@ -1299,6 +1343,7 @@ function addSynthListeners(synth, channel) {
         display.innerHTML = releaseObj.value;
 
         channel.ampEnvelope.node.release = releaseObj.value;
+        synth.release = releaseObj.value;
     });
 };
 
