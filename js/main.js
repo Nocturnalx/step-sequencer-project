@@ -1,6 +1,17 @@
 var mixingDeskArray = []; // Set up mixingdesk list
 var playing = false;
 
+
+//[0] = mini 21 = A0, [106] = midi 127 = G9, [39] = midi 60 = C4,
+var midiNotes = [];
+midiNotes.push("A0");
+midiNotes.push("A#0");
+midiNotes.push("B0");
+
+for (i = 21; i < 128; i++) {
+    midiNotes.push(i);
+}
+
 var masterVolDisplay = document.getElementById('masterVolDisplay');
 var masterVolSlider = document.getElementById('masterVolSlider');
 masterVolDisplay.innerHTML = masterVolSlider.value;
@@ -51,7 +62,7 @@ function drawChannel(channel){
 	var volumeSlider = document.createElement('input');
 	volumeSlider.type = "range";
 	volumeSlider.min = -60;
-	volumeSlider.max = 10;
+	volumeSlider.max = 20;
 	volumeSlider.value = channel.volume;	
 	volumeSlider.id = channel.index + "Vol";
 	channelDiv.appendChild(volumeSlider);
@@ -134,19 +145,29 @@ function drawSequencer(channel) {
 	seqNameDiv.appendChild(seqNameLabel);
 	
 	for (i = 0; i < 8; i++)
-	{
+    {
+        var step = new stepObj(channel, i);
+        channel.stepArray.push(step);
+
+        var container = document.createElement('div');
+        container.classList.add("textContainer");
+        container.id = step.channelIndex + "Step" + step.index;
+        seqDiv.appendChild(container);
+
 		//draw each step for channel
 		var btnStep = document.createElement('img');		
-		btnStep.classList.add("step");		
-		
-		var step = new stepObj(channel, i);	
-		channel.stepArray.push(step);
-		btnStep.src = "resources/pad.png";
-		
-		btnStep.id = step.channelIndex + "step" + step.index;		
-		seqDiv.appendChild(btnStep);
-		
-		step.click_EventHandler();
+		btnStep.classList.add("step");			
+		btnStep.src = "resources/pad.png";	
+		btnStep.id = step.channelIndex + "StepImg" + step.index;		
+		container.appendChild(btnStep);
+
+        var noteDisplay = document.createElement('div');
+        noteDisplay.classList.add("centeredText");
+        noteDisplay.innerHTML = step.note;
+        noteDisplay.id = step.channelIndex + "StepNoteDisplay" + step.Index;
+        container.appendChild(noteDisplay);
+
+		step.startEventListeners();
     }
 
     //synth information div
@@ -318,8 +339,7 @@ function channelObj(chName, chVolume, chPan, chIndex){
             channel.source.node.triggerAttackRelease(note, "8n");
             channel.ampEnvelope.node.triggerAttackRelease("8n");
         },
-        channel.noteArray,
-        "8n");	
+        channel.noteArray, "8n");	
 
 	channel.sequence.start();
 
@@ -396,6 +416,7 @@ function channelObj(chName, chVolume, chPan, chIndex){
 				
 				for(n = 0; n < 8; n++){
                     remove("step" + n, _channel.index, i);
+                    remove("stepImg" + n, _channel.index, i);
 				}
 				
 				//change effects containers ids
@@ -542,6 +563,8 @@ function channelObj(chName, chVolume, chPan, chIndex){
 	this.changeNote = function(stepIndex, note){
 		channel.noteArray[stepIndex] = note;
 
+        console.log(channel.noteArray);
+
 		channel.sequence.dispose();
 
 		if (playing === true){
@@ -623,27 +646,34 @@ function stepObj(channel, stepNo){
 	this.index = stepNo;
 	this.channelIndex = channel.index;
 	this.active = false;
-	this.value = null;
+    this.note = "C4";
 	var step = this;
 	
 	channel.changeNote(step.index, step.value);
 	
-	this.click_EventHandler = function(){
-		var stepButton = document.getElementById(step.channelIndex + "step" + step.index);
-		
+	this.startEventListeners = function(){
+		var stepButton = document.getElementById(step.channelIndex + "Step" + step.index);
+        var stepImg = document.getElementById(step.channelIndex + "StepImg" + step.index);
+        var stepNoteDisplay = document.getElementById(step.channelIndex + "StepNoteDisplay" + step.Index);
+
 		stepButton.addEventListener("click",function(){
-			if (step.active === false){
-				stepButton.src = "resources/padOn.png";
+            if (step.active === false) {
+				stepImg.src = "resources/padOn.png";
 				step.active = true;
-				step.value = "C4";
-				channel.changeNote(step.index, step.value);
+                stepButton.value = step.note;
+				channel.changeNote(step.index, step.note);
 			} else {
-				stepButton.src = "resources/pad.png";
+                stepImg.src = "resources/pad.png";
 				step.active = false;
-				step.value = null;
-				channel.changeNote(step.index, step.value);
-			}			
-		});
+				channel.changeNote(step.index, null);
+			}
+        });
+
+        stepButton.addEventListener("dblclick", function () {
+            this.note = prompt("enter note");
+            channel.changeNote(step.index, step.note);
+            stepNoteDisplay.innerHTML = step.note;
+        });
 	}
 }
 
@@ -1056,6 +1086,7 @@ function sampler(channel, index) {
     this.release = 3;
 
     this.node = new Tone.Sampler();
+
     my.node.volume.value = channel.volume;
 
     var arr = [];
@@ -1087,7 +1118,6 @@ function sampler(channel, index) {
         synthInfoDiv.appendChild(sampleInput);
         my.sampleButton = sampleInput;
         my.inputChangeSample_EventHandler();
-
     };
 
     //remove elements for this div
@@ -1109,17 +1139,11 @@ function sampler(channel, index) {
 
             var fileString;
 
-            //try get data url and set new sampler with data url and see if it can call 
-            //if not find different way of getting file string
-            //if not find sample repository online
-
             reader.onload = function (event) {
                 fileString = event.target.result;
-                my.node = new Tone.Sampler({
-                    "C4": "sample.mp3"
-                });
+                my.node.add("C4", fileString);
                 my.node.debug = true;
-                console.log(my.node.samples);
+                console.log(my.node);
             }
             
             reader.readAsDataURL(file);
@@ -1316,10 +1340,10 @@ function pause() {
 function remove(string, oldIndex, newIndex) {
     document.getElementById(oldIndex + string).id = newIndex + string;
 }
+
 //misc event handlers
 
 //master volume change
-
 masterVolSlider.addEventListener("input", function(){
 	var masterVol = masterVolSlider.value;
 	masterVolDisplay.innerHTML = masterVol;
