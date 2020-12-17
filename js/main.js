@@ -438,8 +438,10 @@ function channelObj(chName, chVolume, chPan, chIndex){
                     remove("btn" + effect.name, _channel.index, i);
                 }
 
-                //for every parameter of synth
+                //swap slider div id
                 remove("SliderDiv", _channel.index, i);
+                //swap colour selector id
+                remove("ColorPicker", _channel.index, i);
 
                 var synthParameterArray = channel.source.parameterArray;
                 for (x = 0; x < synthParameterArray.length; x++) {
@@ -819,7 +821,6 @@ function bitCrusherObj(channel) {
     this.Index;
     this.wet = 0.8;
     this.node = new Tone.BitCrusher(4);
-    console.log(my.node);
     this.name = "Bit Crusher";
 
     var arr1 = [];
