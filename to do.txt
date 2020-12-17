@@ -1,0 +1,2 @@
+change note played length
+add more effects
