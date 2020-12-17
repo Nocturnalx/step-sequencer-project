@@ -35,6 +35,7 @@ body{
 	border: none;
 	transition: all 0.4s ease 0s;
 	cursor: pointer;
+    margin-bottom: 3px !important;
 }
 
 .link{
@@ -49,7 +50,7 @@ row{
 	padding-left: 20px;
 	padding-right: 20px;
 	width: 87%;
-	height: 280px;
+	height: 290px;
 	bottom: 0;
 	overflow-x: auto;
 	background: #fffd;
@@ -109,6 +110,8 @@ row{
 
 .seqDiv{
     cursor: pointer;
+    border-radius: 10px;
+    width: 100%;
 }
 
 .sequencerNameDiv{
@@ -123,6 +126,10 @@ row{
     cursor: text;
 }
 
+.parameterDiv{
+    padding-right: 10px;
+}
+
 .bottomBar{
 	bottom: 0;
 	position: fixed;
@@ -133,9 +140,9 @@ row{
 
 .navbar{
 	overflow: hidden;
-	background-color: #89cff0;
-   top: 0; /* Position the navbar at the top of the page */
-   width: 100%; /*Full width */
+    background-color: #89cff0;
+    top: 0; /* Position the navbar at the top of the page */
+    width: 100%; /*Full width */
 }
 
 /* Links inside the navbar */
@@ -154,20 +161,31 @@ row{
 	color: inherit;
 }
 
-.channelDiv{
-	padding-bottom: 25px;
-	padding-top: 10px;
+.channelContainer{
+	padding-bottom: 7px;
+	padding-top: 7px;
 	padding-left: 10px;
-	padding-right: 10px:
+	padding-right: 10px;
+    margin-left: 0px !important;
+    margin-right: 10px !important;
 	flex-grow: unset !important;
+    border-radius: 15px;
+}
+
+.channelDiv{
+    cursor: pointer;
+    overflow: hidden;
+    padding-right: 10px !important;
+    padding-left: 10px !important;
 }
 
 .effectsDiv{
 	overflow-y: auto;
 	height: 245px;
 	width: 220px !important;
-	margin-right: 25 !important;
+	margin-right: 0px !important;
 	padding-left: 0px !important;
+	padding-right: 0px !important;
 }
 
 .textContainer {

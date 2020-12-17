@@ -1,17 +1,6 @@
 var mixingDeskArray = []; // Set up mixingdesk list
 var playing = false;
 
-
-//[0] = mini 21 = A0, [106] = midi 127 = G9, [39] = midi 60 = C4,
-var midiNotes = [];
-midiNotes.push("A0");
-midiNotes.push("A#0");
-midiNotes.push("B0");
-
-for (i = 21; i < 128; i++) {
-    midiNotes.push(i);
-}
-
 var masterVolDisplay = document.getElementById('masterVolDisplay');
 var masterVolSlider = document.getElementById('masterVolSlider');
 masterVolDisplay.innerHTML = masterVolSlider.value;
@@ -26,6 +15,17 @@ btnPlay.addEventListener("click", play);
 let btnPause = document.getElementById('btnPause');
 btnPause.addEventListener("click", pause);
 
+//tempo display
+var tempoDisplay = document.getElementById('tempoDisplay');
+tempoDisplay.innerHTML = Tone.Transport.bpm.value;
+tempoDisplay.style.cursor = "text";
+tempoDisplay.addEventListener("click", inputTempo);
+
+//tempo slider
+var tempoControlSlider = document.getElementById('tempoControl');
+tempoControlSlider.value = Tone.Transport.bpm.value;
+tempoControlSlider.addEventListener("input", changeTempo);
+
 //~~functions~~
 
 //function draws elements for a given channel
@@ -37,7 +37,7 @@ function drawChannel(channel){
 	var channelContainer = document.createElement('div');
 	channelContainer.id = channel.index + "Container";
 	channelContainer.classList.add("row");
-	channelContainer.classList.add("channelDiv");
+    channelContainer.classList.add("channelContainer");
 	desk.appendChild(channelContainer);
 
 	//CHANNEL DIV
@@ -45,11 +45,9 @@ function drawChannel(channel){
 	//create div for channel
 	var channelDiv = document.createElement('div');
 	channelDiv.classList.add("col");
+	channelDiv.classList.add("channelDiv");
 	channelDiv.id = channel.index;
-	channelDiv.style.cursor = "pointer";
-    channelDiv.style.width = "160px";
-    channelDiv.style.overflow = "hidden";
-	channelContainer.appendChild(channelDiv);		
+    channelContainer.appendChild(channelDiv);
 	
 	//create <p> containing channel name
 	var channelName = document.createElement('p');
@@ -93,7 +91,7 @@ function drawChannel(channel){
 	btnMute.type = "button";
 	btnMute.id = channel.index + "Mute";
 	btnMute.value = "Mute";
-	btnMute.classList.add("button");
+    btnMute.classList.add("button");
 	channelDiv.appendChild(btnMute);	
 	
 	//inputs like being together so add break (might be able to do this in css but i cant be arsed)
@@ -189,6 +187,11 @@ function drawSequencer(channel) {
         synthDropDown.appendChild(option);
     }
 
+    var colorPicker = document.createElement('input');
+    colorPicker.type = "color";
+    colorPicker.id = channel.index + "ColorPicker";
+    synthInfoDiv.appendChild(colorPicker);
+
     //call function that will show default synths options menu
     channel.source.add();
 
@@ -261,6 +264,7 @@ function drawSynthInfoValues(channel) {
 
         var parameterDiv = document.createElement('div');
         parameterDiv.id = "parameterDiv";
+        parameterDiv.classList.add("parameterDiv");
         sliderDiv.appendChild(parameterDiv);
 
         var label = document.createElement('p');
@@ -296,10 +300,10 @@ function channelObj(chName, chVolume, chPan, chIndex){
 	this.nodeArray = nodeArr;
 	var channel = this;
 
-	var arr1 = [];
-	this.stepArray = arr1;
-    var arr2 = [null,null,null,null,null,null,null,null];
-	this.noteArray = arr2;
+	var stepArr = [];
+	this.stepArray = stepArr;
+    var noteArr = [null,null,null,null,null,null,null,null];
+	this.noteArray = noteArr;
 
     var arr3 = [];
     this.synthArray = arr3;
@@ -334,12 +338,10 @@ function channelObj(chName, chVolume, chPan, chIndex){
     channel.nodeArray[channel.nodeArray.length - 1].node.toMaster();
 
 	//create sequence for synth from array
-    this.sequence = new Tone.Sequence(
-        function (time, note) {
+    this.sequence = new Tone.Sequence( function (time, note) {
             channel.source.node.triggerAttackRelease(note, "8n");
             channel.ampEnvelope.node.triggerAttackRelease("8n");
         }, channel.noteArray, "8n");	
-
 	channel.sequence.start();
 
 	//CREATE EFFECTS OBJECT
@@ -555,32 +557,17 @@ function channelObj(chName, chVolume, chPan, chIndex){
             channel.source.add();            
         });
 
+        //change color 
+        var colorPicker = document.getElementById(channel.index + "ColorPicker");
+        var channelContainer = document.getElementById(channel.index + "Container");
+        colorPicker.addEventListener("input", function () {
+            seqDiv.style.backgroundColor = colorPicker.value;
+            channelContainer.style.backgroundColor = colorPicker.value;
+        })
+
 		//call effects event listeners
 		channel.effects.startEventListeners();
 	}
-
-	//add notes to the array
-	this.changeNote = function(stepIndex, note){
-		channel.noteArray[stepIndex] = note;
-
-        console.log(channel.noteArray);
-
-		channel.sequence.dispose();
-
-		if (playing === true){
-			Tone.Transport.stop();
-		}	
-
-		channel.sequence = new Tone.Sequence(function(time, note) {
-            channel.source.node.triggerAttackRelease(note, "8n");
-            channel.ampEnvelope.node.triggerAttackRelease("8n");
-		}, channel.noteArray, "8n");		
-		channel.sequence.start();
-		
-		if (playing === true){
-			Tone.Transport.start();
-		}
-	};
 	
 	//funtion to connect or disconnect the node, returns the new state of whether its connected or not
 	this.addRemoveNode = function(effect){
@@ -648,40 +635,43 @@ function stepObj(channel, stepNo){
     this.note = "C4";
 	var step = this;
 	
-	this.startEventListeners = function(){
+    this.startEventListeners = function () {
+        //get elements
 		var stepButton = document.getElementById(step.channelIndex + "Step" + step.index);
         var stepImg = document.getElementById(step.channelIndex + "StepImg" + step.index);
         var stepNoteDisplay = document.getElementById(step.channelIndex + "StepNoteDisplay" + step.index);
 
+        //turn step on and off 
 		stepButton.addEventListener("click",function(){
             if (step.active === false) {
 				stepImg.src = "resources/padOn.png";
 				step.active = true;
-                stepButton.value = step.note;
-				channel.changeNote(step.index, step.note);
+                stepButton.value = step.note; //(html button not stepObj)
+                channel.sequence.at(step.index, step.note);
 			} else {
                 stepImg.src = "resources/pad.png";
 				step.active = false;
-				channel.changeNote(step.index, null);
+                channel.sequence.remove(step.index);
 			}
         });
 
+        //change step's note
         stepButton.addEventListener("auxclick", function (e) {       
             if (e.button == 1) {
-                var newNote = prompt("enter note");   
+                var newNote = prompt("enter note");
+                //if not empty
                 if (!(newNote == "")) {
-                    //try catch here to make sure what is being passed is a note
-                    if (newNote.length == 2) {
-                        if (/A|B|C|D|E|F|G/i.test(newNote.split("")[0]) && /0|1|2|3|4|5|6|7|8|9/.test(newNote.split("")[1])) {
-                            step.note = newNote;
-                            stepNoteDisplay.innerHTML = step.note;
-                            console.log(step.note);
-                            if (step.active) {
-                                channel.changeNote(step.index, step.note);
-                            }
-                        } else {
-                            console.log(newNote + "is note a valid note notes are in the following notation: C4, A3, F#5...etc");
+                    //length < 4 && 1st = musical note && (2nd = number || (2nd = # && 3rd = number);
+                    var regexNum = /0|1|2|3|4|5|6|7|8|9/;
+                    var regexStr = /A|B|C|D|E|F|G/i;
+                    if (newNote.length < 4 && regexStr.test(newNote.split("")[0]) && (regexNum.test(newNote.split("")[1]) || (/#/.test(newNote.split("")[1]) && regexNum.test(newNote.split("")[2])))) {
+                        step.note = newNote;
+                        stepNoteDisplay.innerHTML = step.note;
+                        if (step.active) {
+                            channel.sequence.at(step.index, step.note);
                         }
+                    } else {
+                        console.log(newNote + ' is not a valid note, notes are to be input in the following notation: C4, A3, F#5...etc');
                     }
                 }         
             }           
@@ -703,12 +693,12 @@ function effectsObj(channel){
     //delay
     this.delay = new delayObj(channel);
     effects.effectsArray.push(effects.delay);
-    //auto panner
-    this.autoPanner = new autoPannerObj(channel);
-    effects.effectsArray.push(effects.autoPanner);
     //distortion
     this.distortion = new distortionObj(channel);
     effects.effectsArray.push(effects.distortion);
+    //bit crusher
+    this.bitCrusher = new bitCrusherObj(channel);
+    effects.effectsArray.push(effects.bitCrusher);
 	
 	//starts all event listeners for each effect
 	this.startEventListeners = function(){
@@ -755,9 +745,9 @@ function reverbObj(channel){
     this.sliderReverbDampening_EventHandler = new sliderListener(dampeningInfo, channel);
     my.listenerArray.push(my.sliderReverbDampening_EventHandler);
     
-	//event listener for cconnect/disconnect button
-    this.btnReverb_EventHandler = new effectButtonListener(my, channel);
-    my.listenerArray.push(my.btnReverb_EventHandler);
+    //connect buitton
+    my.connectButton_EventHandler = new effectButtonListener(my, channel);
+    my.listenerArray.push(my.connectButton_EventHandler);
 
 }
 
@@ -791,32 +781,6 @@ function delayObj(channel){
     this.delayFeedbackSlider_EventHandler = new sliderListener(feedbackInfo, channel);
     my.listenerArray.push(my.delayFeedbackSlider_EventHandler);
 
-    //connect/disconect button
-    this.btnDelay_EventHandler = new effectButtonListener(my, channel);
-    my.listenerArray.push(my.btnDelay_EventHandler);
-}
-
-//auto panner
-function autoPannerObj(channel){
-    var my = this;
-    this.connected = false;
-    this.index;
-    this.name = "Auto Panner";
-    this.frequency = 2;
-    this.node = new Tone.AutoPanner(my.frequency);
-
-    var arr1 = [];
-    this.parameterArray = arr1;
-
-    var arr2 = [];
-    this.listenerArray = arr2;
-
-    //frequency
-    var frequencyInfo = new parameterInfoObj("Frequency", "AutoPannerFrequency", 0, 500, my.frequency, 100, my.node.frequency);
-    my.parameterArray.push(frequencyInfo);
-    this.autoPannerFrequencySlider_EventHandler = new sliderListener(frequencyInfo, channel);
-    my.listenerArray.push(my.autoPannerFrequencySlider_EventHandler);
-
     //connect buitton
     my.connectButton_EventHandler = new effectButtonListener(my, channel);
     my.listenerArray.push(my.connectButton_EventHandler);
@@ -843,6 +807,31 @@ function distortionObj(channel) {
     my.parameterArray.push(distortionWetInfo);
     this.distortionWetSlider_EventHandler = new sliderListener(distortionWetInfo, channel);
     my.listenerArray.push(my.distortionWetSlider_EventHandler);
+
+    //connect buitton
+    my.connectButton_EventHandler = new effectButtonListener(my, channel);
+    my.listenerArray.push(my.connectButton_EventHandler);
+}
+
+function bitCrusherObj(channel) {
+    var my = this;
+    this.connected = false;
+    this.Index;
+    this.wet = 0.8;
+    this.node = new Tone.BitCrusher(4);
+    console.log(my.node);
+    this.name = "Bit Crusher";
+
+    var arr1 = [];
+    this.parameterArray = arr1;
+
+    var arr2 = [];
+    this.listenerArray = arr2;
+
+    var wetInfo = new parameterInfoObj("Wet", "BitCrusherWet", 0, 100, my.wet, 100, my.node.wet);
+    my.parameterArray.push(wetInfo);
+    this.wetSlider_EventHandler = new sliderListener(wetInfo, channel);
+    my.listenerArray.push(my.wetSlider_EventHandler);
 
     //connect buitton
     my.connectButton_EventHandler = new effectButtonListener(my, channel);
@@ -1185,7 +1174,6 @@ function sampler(channel, index) {
                 fileString = event.target.result;
                 my.node.add("C4", fileString);
                 my.node.debug = true;
-                console.log(my.node);
             }
             
             reader.readAsDataURL(file);
@@ -1380,6 +1368,28 @@ function play() {
 function pause() {
     Tone.Transport.stop();
     playing = false;
+}
+
+function changeTempo() {
+    Tone.Transport.bpm.value = tempoControlSlider.value;
+    tempoDisplay.innerHTML = tempoControlSlider.value;
+}
+
+function inputTempo() {
+    var tempo = prompt("Input Tempo");
+    //is a number
+    if (!(isNaN(tempo))) {
+        //is in range
+        if (tempo > 9 && tempo < 251) {
+            Tone.Transport.bpm.value = tempo;
+            tempoDisplay.innerHTML = tempo;
+            tempoControlSlider.value = tempo;
+        } else {
+            console.log(tempo + " is not in range, range is 10 - 250")
+        }
+    } else {
+        console.log(tempo + " is not a number");
+    }
 }
 
 function remove(string, oldIndex, newIndex) {

@@ -2,6 +2,7 @@
 <head>
 <title>Web Audio Preview</title>
 <link rel="stylesheet" href="style\main.css">
+<link rel="stylesheet" href="style\slider.css">
  
 <meta name="viewport" content="width=device-width, initial-scale=1">
   
@@ -29,16 +30,20 @@ if (/MSIE (\d+\.\d+);/.test(navigator.userAgent) || navigator.userAgent.indexOf(
 </div>
 
 <div class="navbar" style="background-color: transparent;">
-	<!--play pause button-->
-	<div class="playPauseButton">
-		<input class="button" value="Play" type="button" id="btnPlay">
-		<input class="button" value="Pause" type="button" id="btnPause">
-	</div>
+    <!--play pause button-->
+    <div class="playPauseButton">
+        <input class="button" value="Play" type="button" id="btnPlay">
+        <input class="button" value="Pause" type="button" id="btnPause">
+    </div>
 
-	<!--Add new channel button-->
-	<div id="divAddChannel" class="addChannelButton">
-		<input type="button" id="btnAddChannel" value="Add channel" class="button">
-	</div>
+    <div>
+        <p>Tempo control: <input type="range" min="10" max="250" value="120" id="tempoControl"> <label id="tempoDisplay" style="width: 30px;"></label> </p>
+    </div>
+
+    <!--Add new channel button-->
+    <div id="divAddChannel" class="addChannelButton">
+        <input type="button" id="btnAddChannel" value="Add channel" class="button">
+    </div>
 </div>
 
 <div id="main">
