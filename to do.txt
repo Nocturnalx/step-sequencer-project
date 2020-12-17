@@ -1,2 +1,4 @@
+make sequence 16 notes as default 
 change note played length
 add more effects
+add functionality to change ammount of notes in seq
