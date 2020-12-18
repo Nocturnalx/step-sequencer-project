@@ -1,4 +1,4 @@
-var mixingDeskArray = []; // Set up mixingdesk list
+var channelArray = []; // Set up mixingdesk list
 var playing = false;
 
 var masterVolDisplay = document.getElementById('masterVolDisplay');
@@ -141,32 +141,8 @@ function drawSequencer(channel) {
 	seqNameLabel.classList.add("seqNameLabel");
 	seqNameLabel.innerHTML = channel.name;
 	seqNameDiv.appendChild(seqNameLabel);
-	
-	for (i = 0; i < 8; i++)
-    {
-        var step = new stepObj(channel, i);
-        channel.stepArray.push(step);
 
-        var container = document.createElement('div');
-        container.classList.add("textContainer");
-        container.id = step.channelIndex + "Step" + step.index;
-        seqDiv.appendChild(container);
-
-		//draw each step for channel
-		var btnStep = document.createElement('img');		
-		btnStep.classList.add("step");			
-		btnStep.src = "resources/pad.png";	
-		btnStep.id = step.channelIndex + "StepImg" + step.index;		
-		container.appendChild(btnStep);
-
-        var noteDisplay = document.createElement('div');
-        noteDisplay.classList.add("centeredText");
-        noteDisplay.innerHTML = step.note;
-        noteDisplay.id = step.channelIndex + "StepNoteDisplay" + step.index;
-        container.appendChild(noteDisplay);
-
-		step.startEventListeners();
-    }
+    drawSteps(channel);
 
     //synth information div
     var synthInfoDiv = document.createElement('div');
@@ -196,6 +172,35 @@ function drawSequencer(channel) {
     channel.source.add();
 
     //create sampler 
+}
+
+function drawSteps(channel) {
+    var seqDiv = document.getElementById(channel.index + "Seq");
+
+    for (i = 0; i < channel.noteArray.length; i++) {
+        var step = new stepObj(channel, i);
+        channel.stepArray.push(step);
+
+        var container = document.createElement('div');
+        container.classList.add("textContainer");
+        container.id = step.channelIndex + "Step" + step.index;
+        seqDiv.appendChild(container);
+
+        //draw each step for channel
+        var btnStep = document.createElement('img');
+        btnStep.classList.add("step");
+        btnStep.src = "resources/pad.png";
+        btnStep.id = step.channelIndex + "StepImg" + step.index;
+        container.appendChild(btnStep);
+
+        var noteDisplay = document.createElement('div');
+        noteDisplay.classList.add("centeredText");
+        noteDisplay.innerHTML = step.note;
+        noteDisplay.id = step.channelIndex + "StepNoteDisplay" + step.index;
+        container.appendChild(noteDisplay);
+
+        step.startEventListeners();
+    }
 }
 
 function drawEffects(channel){
@@ -302,7 +307,7 @@ function channelObj(chName, chVolume, chPan, chIndex){
 
 	var stepArr = [];
 	this.stepArray = stepArr;
-    var noteArr = [null,null,null,null,null,null,null,null];
+    var noteArr = [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null];
 	this.noteArray = noteArr;
 
     var arr3 = [];
@@ -386,12 +391,12 @@ function channelObj(chName, chVolume, chPan, chIndex){
 			channel.sequence.dispose();
 			
 			//splice to get rid of item from middle of array
-			mixingDeskArray.splice(channel.index,1);
+			channelArray.splice(channel.index,1);
 			
 			//set indexes of all new arrays to their new place
-			for(i = channel.index; i < mixingDeskArray.length; i++){
+			for(i = channel.index; i < channelArray.length; i++){
 				// "_" prefix is shifted channels
-				let _channel = mixingDeskArray[i];
+				let _channel = channelArray[i];
 				//use old index to get then set new ids
 				
 				//container
@@ -494,21 +499,25 @@ function channelObj(chName, chVolume, chPan, chIndex){
 		
 		chNameTag.addEventListener("click", function(){
             var newName = prompt("Enter channel name:");
-            if (!(newName == "")) {
-                chNameTag.innerHTML = newName;
-                seqNameTag.innerHTML = newName;
+            if (!(newName == null)) {
+                if (!(newName.trim() == "")) {
+                    chNameTag.innerHTML = newName;
+                    seqNameTag.innerHTML = newName;
 
-                channel.name = newName;
-            }		
+                    channel.name = newName;
+                }
+            }
 		});
 		
 		seqNameTag.addEventListener("click", function(){
 			var newName = prompt("Enter channel name:");
-            if (!(newName == "")) {
-                chNameTag.innerHTML = newName;
-                seqNameTag.innerHTML = newName;
+            if (!(newName == null)) {
+                if (!(newName.trim() == "")) {
+                    chNameTag.innerHTML = newName;
+                    seqNameTag.innerHTML = newName;
 
-                channel.name = newName;
+                    channel.name = newName;
+                }
             }			
 		});
 		
@@ -594,7 +603,7 @@ function channelObj(chName, chVolume, chPan, chIndex){
 			//connect new node to master
 			node.toMaster();
 			
-			nodeIndex = channel.nodeArray.length;
+            nodeIndex = channel.nodeArray.length;
 			//add new node to array
 			channel.nodeArray.push(effect);
 			
@@ -604,20 +613,28 @@ function channelObj(chName, chVolume, chPan, chIndex){
             pre = preObj.node;
 
 			var post;
-			
+
 			if (nodeIndex === channel.nodeArray.length - 1){
                 post = Tone.Master;
-                
-			} else {
+            } else {
+                //get item from infront in array
                 var postObj = channel.nodeArray[nodeIndex + 1];
                 post = postObj.node;
-                postObj.index = postObj.index - 1;
+
+                //on disconnect bring down all indexes of effects above
+                //postObj.index = postObj.index - 1; //this brings down index of one above 
+
+                for (i = postObj.index; i < channel.nodeArray.length; i++) {
+                    let nodeObj = channel.nodeArray[i];
+                    nodeObj.index = nodeObj.index - 1;
+                }
+
 			}
 
 			//separate from pre and post
 			pre.disconnect(node);
 			node.disconnect(post);
-		
+
 			//remove from array splice leave no "holes" and dispose node
 			channel.nodeArray.splice(nodeIndex, 1);
 			
@@ -666,16 +683,22 @@ function stepObj(channel, stepNo){
                     //length < 4 && 1st = musical note && (2nd = number || (2nd = # && 3rd = number);
                     var regexNum = /0|1|2|3|4|5|6|7|8|9/;
                     var regexStr = /A|B|C|D|E|F|G/i;
-                    if (newNote.length < 4 && regexStr.test(newNote.split("")[0]) && (regexNum.test(newNote.split("")[1]) || (/#/.test(newNote.split("")[1]) && regexNum.test(newNote.split("")[2])))) {
-                        step.note = newNote;
-                        stepNoteDisplay.innerHTML = step.note;
-                        if (step.active) {
-                            channel.sequence.at(step.index, step.note);
+                    if (!(newNote == null)) {
+                        if (newNote.length < 4 && regexStr.test(newNote.split("")[0]) && (regexNum.test(newNote.split("")[1]) || (/#/.test(newNote.split("")[1]) && regexNum.test(newNote.split("")[2])))) {
+                            step.note = newNote;
+                            stepNoteDisplay.innerHTML = step.note;
+                            if (step.active) {
+                                channel.sequence.at(step.index, step.note);
+                            }
+                        } else {
+                            console.log(newNote + ' is not a valid note, notes are to be input in the following notation: C4, A3, F#5...etc');
                         }
                     } else {
-                        console.log(newNote + ' is not a valid note, notes are to be input in the following notation: C4, A3, F#5...etc');
+                        console.log("Input closed");
                     }
-                }         
+                } else {
+                    console.log("String was empty");
+                }     
             }           
         });
 	}
@@ -1145,7 +1168,7 @@ function sampler(channel, index) {
         //button to add sample
         var sampleInput = document.createElement('input');
         sampleInput.type = "file";
-        sampleInput.accept = ".mp3, .m4a, .wav, ";
+        sampleInput.accept = ".mp3, .wav";
         sampleInput.innerHTML = "Choose Sample";
         synthInfoDiv.appendChild(sampleInput);
         my.sampleButton = sampleInput;
@@ -1342,7 +1365,7 @@ function addChannel() {
     let newChannelName = prompt("New Channel Name");
 
     //creating new channel object and adding to array
-    let channelIndex = mixingDeskArray.length;
+    let channelIndex = channelArray.length;
 
     //validation (object doesnt like not having a name :( )
     if (newChannelName.length === 0) {
@@ -1351,7 +1374,7 @@ function addChannel() {
     }
 
     let newChannel = new channelObj(newChannelName, 0.0, 0.0, channelIndex);
-    mixingDeskArray.push(newChannel);
+    channelArray.push(newChannel);
     drawChannel(newChannel);
     drawSequencer(newChannel);
     drawEffects(newChannel);

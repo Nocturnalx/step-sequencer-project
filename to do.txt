@@ -1,6 +1,3 @@
-color changer needs to be added to remove event handler 
-make sequence 16 notes as default 
 change note played length
 add more effects
-add functionality to change ammount of notes in seq
 prevent default on double click selecting
