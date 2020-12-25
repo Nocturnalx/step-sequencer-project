@@ -471,7 +471,7 @@ function channelObj(chName, chVolume, chPan, chIndex){
 				channel.muted = true;
 				volumeDisplay.innerHTML = "Muted";
 				
-				channel.source.node.volume.value = -100;
+				channel.source.node.volume.value = -200;
 			} else{
 				channel.muted = false;
 				volumeDisplay.innerHTML = channel.volume;

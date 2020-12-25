@@ -56,29 +56,29 @@ row{
 	background: #fffd;
 	border-radius: 20px;
 	margin-right: 10px !important;
-   margin-left: 10px !important;
-   margin-bottom: 5px;
+    margin-left: 10px !important;
+    margin-bottom: 5px;
 }
 
-.effects{
+.master{
 	padding-left: 20px;
 	padding-right: 20px;
 	width:10%;
-	height: 280px;
+	height: 290px;
 	bottom: 0;
 	overflow-x: auto;
 	float: right;
 	background: #fffd;
 	border-radius: 20px;
 	margin-right: 0px !important;
-   margin-left: 0px !important;
-   margin-bottom: 5px;
+    margin-left: 0px !important;
+    margin-bottom: 5px;
 }
 
 .sequencersContainer{
 	padding-top: 5px;
 	display: block;
-	height: 400px;
+	height: 450px;
 	width: 98% !important;
 	overflow-y: auto;
 	background: #fffd;
