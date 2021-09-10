@@ -1387,11 +1387,23 @@ function addChannel() {
 function play() {
     Tone.Transport.start();
     playing = true;
+    //get this
+    //make transparent
+    btnPlay.style = "background-color: transparent;"
+
+    //get pause button 
+    //change color
+    btnPause.style ="background-color: #89cff0;"
+    
 }
 
 function pause() {
     Tone.Transport.stop();
     playing = false;
+
+    btnPause.style = "background-color: transparent;"
+
+    btnPlay.style = "background-color: #89cff0;"
 }
 
 function changeTempo() {
